@@ -6,11 +6,11 @@
 - Milestone 1: Verified and complete
 - Milestone 2: Completed as guidance-only setup plan
 - Milestone 3: Designed and ready for implementation review
-- Milestone 4: Completed as foundation planning
-- Milestone 5: Completed as foundation planning
-- Milestone 6: Completed as foundation planning
-- Milestone 7: Completed as foundation planning
-- Milestone 8: Completed as foundation planning
+- Milestone 4: Implemented with the initial exam validation and scoring rules
+- Milestone 5: Implemented with query and community access rules
+- Milestone 6: Implemented with dashboard access and metric calculation rules
+- Milestone 7: Implemented with AI approval and mock-provider safety checks
+- Milestone 8: Implemented with security hardening and pilot-readiness checks
 - Milestone 9: In progress
 - Repository: initialized with a React + TypeScript + Vite + Tailwind frontend foundation
 - Next step: prepare the production readiness checklist, deployment discipline, and operational safeguards
