@@ -1,17 +1,34 @@
-export type SessionUser = {
-  id: string;
-  email: string;
-  schoolId: string;
-  role: "platform_owner" | "school_admin" | "teacher" | "student" | "parent";
-};
+export type Role = 'platform_owner' | 'school_admin' | 'teacher' | 'student' | 'parent';
 
-export function parseBearerToken(header: string | null): string | null {
-  if (!header) return null;
-  const match = /^Bearer\s+(.+)$/i.exec(header);
-  return match ? match[1] : null;
+export interface AuthSession {
+  userId: string;
+  username: string;
+  schoolId: string | null;
+  role: Role;
+  assignedSectionIds?: string[];
+  verifiedChildIds?: string[];
 }
 
-export function isValidUserSession(user: SessionUser | null): boolean {
-  if (!user) return false;
-  return Boolean(user.id && user.schoolId && user.email);
+export function formatSyntheticEmail(username: string, schoolCode?: string): string {
+  const cleanUser = username.trim().toLowerCase().replace(/[^a-z0-9._-]/g, '');
+  if (!cleanUser) {
+    throw new Error('Username is required');
+  }
+  const tenantPart = schoolCode
+    ? schoolCode.trim().toLowerCase().replace(/[^a-z0-9-]/g, '')
+    : 'platform';
+  return `${cleanUser}@${tenantPart}.examify.internal`;
+}
+
+export function parseBearerToken(authHeader: string | null): string | null {
+  if (!authHeader || !authHeader.startsWith('Bearer ')) return null;
+  const token = authHeader.slice(7).trim();
+  return token.length > 0 ? token : null;
+}
+
+export function assertAuthenticated(session: AuthSession | null): AuthSession {
+  if (!session || !session.userId) {
+    throw new Error('UNAUTHORIZED: Valid session required');
+  }
+  return session;
 }

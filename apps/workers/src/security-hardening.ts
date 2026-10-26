@@ -1,58 +1,66 @@
-export type PayloadLike = Record<string, unknown>;
+const ALLOWED_MIME_TYPES = new Set([
+  'application/pdf',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'image/png',
+  'image/jpeg',
+  'image/webp',
+  'text/plain',
+]);
 
-export type PayloadValidationResult =
-  | { valid: true }
-  | { valid: false; error: string };
+const MAX_UPLOAD_BYTES = 10 * 1024 * 1024; // 10 MB
 
-export function validatePayload(payload: PayloadLike): PayloadValidationResult {
-  if (!payload || typeof payload !== "object") {
-    return { valid: false, error: "payload is required" };
+export interface FileUploadCandidate {
+  fileName: string;
+  mimeType: string;
+  sizeBytes: number;
+}
+
+export function validateUpload(file: FileUploadCandidate): { valid: boolean; reason?: string } {
+  if (!file.fileName || file.fileName.includes('..') || file.fileName.includes('/') || file.fileName.includes('\\')) {
+    return { valid: false, reason: 'Invalid file name or path traversal detected' };
   }
-
-  if (
-    !("title" in payload) ||
-    typeof payload.title !== "string" ||
-    !payload.title.trim()
-  ) {
-    return { valid: false, error: "title is required" };
+  if (!ALLOWED_MIME_TYPES.has(file.mimeType)) {
+    return { valid: false, reason: `Unsupported file type: ${file.mimeType}` };
   }
-
+  if (file.sizeBytes <= 0 || file.sizeBytes > MAX_UPLOAD_BYTES) {
+    return { valid: false, reason: 'File size must be between 1 byte and 10 MB' };
+  }
   return { valid: true };
 }
 
-export function validateSchoolPayload(
-  schoolId: string,
-  userId: string,
-  payload: PayloadLike,
-): PayloadValidationResult {
-  if (!schoolId?.trim()) {
-    return { valid: false, error: "schoolId is required" };
-  }
-
-  if (!userId?.trim()) {
-    return { valid: false, error: "userId is required" };
-  }
-
-  return validatePayload(payload);
+export function sanitizeTextInput(input: string, maxLength = 5000): string {
+  return input
+    .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+    .replace(/[<>]/g, (ch) => (ch === '<' ? '&lt;' : '&gt;'))
+    .trim()
+    .slice(0, maxLength);
 }
 
-export function isRateLimited(calls: number[], windowMs: number): boolean {
-  if (!Array.isArray(calls) || calls.length === 0 || windowMs <= 0) {
-    return false;
-  }
+export class SlidingWindowRateLimiter {
+  private hits = new Map<string, number[]>();
 
-  const now = Date.now();
-  const recentCalls = calls.filter((time) => now - time < windowMs);
-  return recentCalls.length > 6;
+  constructor(private readonly maxRequests: number, private readonly windowMs: number) {}
+
+  allow(key: string, nowMs = Date.now()): boolean {
+    const windowStart = nowMs - this.windowMs;
+    const timestamps = (this.hits.get(key) ?? []).filter((t) => t > windowStart);
+    if (timestamps.length >= this.maxRequests) {
+      this.hits.set(key, timestamps);
+      return false;
+    }
+    timestamps.push(nowMs);
+    this.hits.set(key, timestamps);
+    return true;
+  }
 }
 
-export function requiresAuditLog(action: string): boolean {
-  return [
-    "publish_exam",
-    "change_marks",
-    "send_group_message",
-    "change_permissions",
-    "issue_warning",
-    "reassign_query",
-  ].includes(action);
+export function getSecurityHeaders(allowedOrigin: string): Record<string, string> {
+  return {
+    'Access-Control-Allow-Origin': allowedOrigin,
+    'Access-Control-Allow-Methods': 'GET, POST, PATCH, DELETE, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    'X-Content-Type-Options': 'nosniff',
+    'X-Frame-Options': 'DENY',
+    'Referrer-Policy': 'strict-origin-when-cross-origin',
+  };
 }

@@ -1,50 +1,31 @@
-import { describe, expect, it } from "vitest";
-import {
-  isRateLimited,
-  requiresAuditLog,
-  validatePayload,
-  validateSchoolPayload,
-} from "../src/security-hardening.js";
+import { describe, expect, it } from 'vitest';
+import { sanitizeTextInput, SlidingWindowRateLimiter, validateUpload } from '../src/security-hardening';
 
-describe("security hardening and pilot readiness rules", () => {
-  it("blocks invalid payloads and applies rate limiting correctly", () => {
-    const now = Date.now();
-
-    expect(validatePayload({ title: "Test" })).toEqual({ valid: true });
-    expect(validatePayload({ title: "" })).toEqual({
-      valid: false,
-      error: "title is required",
-    });
-    expect(isRateLimited([now - 1000, now - 2000, now - 3000], 6000)).toBe(
-      false,
-    );
+describe('Upload Validation, Input Sanitization & Rate Limiting', () => {
+  it('accepts safe PDF and image uploads under 10MB', () => {
     expect(
-      isRateLimited(
-        [
-          now - 100,
-          now - 200,
-          now - 300,
-          now - 400,
-          now - 500,
-          now - 600,
-          now - 700,
-        ],
-        6000,
-      ),
+      validateUpload({ fileName: 'chapter1_notes.pdf', mimeType: 'application/pdf', sizeBytes: 1_200_000 }).valid
     ).toBe(true);
   });
 
-  it("enforces school-scoped checks and audit logging requirements", () => {
+  it('rejects path traversal and executable files', () => {
     expect(
-      validateSchoolPayload("school-a", "teacher-1", { title: "Draft exam" }),
-    ).toEqual({ valid: true });
+      validateUpload({ fileName: '../secrets.env', mimeType: 'text/plain', sizeBytes: 200 }).valid
+    ).toBe(false);
     expect(
-      validateSchoolPayload("", "teacher-1", { title: "Draft exam" }),
-    ).toEqual({
-      valid: false,
-      error: "schoolId is required",
-    });
-    expect(requiresAuditLog("publish_exam")).toBe(true);
-    expect(requiresAuditLog("view_dashboard")).toBe(false);
+      validateUpload({ fileName: 'payload.exe', mimeType: 'application/x-msdownload', sizeBytes: 4000 }).valid
+    ).toBe(false);
+  });
+
+  it('strips inline script tags from user inputs', () => {
+    const dirty = 'Hello <script>alert("xss")</script> Class 9C';
+    expect(sanitizeTextInput(dirty)).toBe('Hello  Class 9C');
+  });
+
+  it('enforces sliding window rate limits', () => {
+    const limiter = new SlidingWindowRateLimiter(2, 10_000);
+    expect(limiter.allow('ip-1', 1000)).toBe(true);
+    expect(limiter.allow('ip-1', 2000)).toBe(true);
+    expect(limiter.allow('ip-1', 3000)).toBe(false);
   });
 });

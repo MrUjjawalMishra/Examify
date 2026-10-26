@@ -1,22 +1,28 @@
-insert into schools (id, name, slug, domain, settings)
-values
-  ('11111111-1111-4111-8111-111111111111', 'Green Valley School', 'green-valley', 'greenvalley.example', '{"region":"north"}'),
-  ('22222222-2222-4222-8222-222222222222', 'Blue Horizon Academy', 'blue-horizon', 'bluehorizon.example', '{"region":"south"}');
+-- ============================================================================
+-- SYNTHETIC PILOT SEED DATA (NO REAL STUDENT DATA)
+-- ============================================================================
+INSERT INTO schools (id, code, name, city, state, status, plan_tier, query_min_sla_hours, query_max_sla_hours, max_tab_violations)
+VALUES
+  ('11111111-1111-4111-8111-111111111111', 'GREENVALLEY-VNS', 'Green Valley Public School (Demo)', 'Varanasi', 'Uttar Pradesh', 'pilot', 'pilot', 48, 168, 3),
+  ('22222222-2222-4222-8222-222222222222', 'SUNRISE-LKO', 'Sunrise Academy (Demo)', 'Lucknow', 'Uttar Pradesh', 'active', 'standard', 48, 120, 2)
+ON CONFLICT (code) DO NOTHING;
 
-insert into users (id, school_id, email, full_name, role)
-values
-  ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', '11111111-1111-4111-8111-111111111111', 'owner@greenvalley.example', 'Platform Owner', 'platform_owner'),
-  ('bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', '11111111-1111-4111-8111-111111111111', 'admin@greenvalley.example', 'School Admin', 'school_admin'),
-  ('cccccccc-cccc-4ccc-8ccc-cccccccccccc', '11111111-1111-4111-8111-111111111111', 'teacher@greenvalley.example', 'Teacher One', 'teacher'),
-  ('dddddddd-dddd-4ddd-8ddd-dddddddddddd', '11111111-1111-4111-8111-111111111111', 'student@greenvalley.example', 'Student One', 'student'),
-  ('eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee', '22222222-2222-4222-8222-222222222222', 'admin@bluehorizon.example', 'Admin Two', 'school_admin');
+INSERT INTO classes (id, school_id, name, academic_year)
+VALUES
+  ('c9000000-0000-4000-8000-000000000001', '11111111-1111-4111-8111-111111111111', 'Class 9', '2026-27'),
+  ('c1100000-0000-4000-8000-000000000002', '11111111-1111-4111-8111-111111111111', 'Class 11', '2026-27')
+ON CONFLICT DO NOTHING;
 
-insert into classes (id, school_id, name, section, grade_level)
-values
-  ('33333333-3333-4333-8333-333333333333', '11111111-1111-4111-8111-111111111111', 'Class 9', 'A', '9'),
-  ('44444444-4444-4444-8444-444444444444', '11111111-1111-4111-8111-111111111111', 'Class 10', 'B', '10');
+INSERT INTO sections (id, school_id, class_id, name)
+VALUES
+  ('5ec00000-0000-4000-8000-00000000009a', '11111111-1111-4111-8111-111111111111', 'c9000000-0000-4000-8000-000000000001', 'A'),
+  ('5ec00000-0000-4000-8000-00000000009c', '11111111-1111-4111-8111-111111111111', 'c9000000-0000-4000-8000-000000000001', 'C'),
+  ('5ec00000-0000-4000-8000-00000000011a', '11111111-1111-4111-8111-111111111111', 'c1100000-0000-4000-8000-000000000002', 'A')
+ON CONFLICT DO NOTHING;
 
-insert into subjects (id, school_id, name, code)
-values
-  ('55555555-5555-4555-8555-555555555555', '11111111-1111-4111-8111-111111111111', 'Mathematics', 'MATH'),
-  ('66666666-6666-4666-8666-666666666666', '11111111-1111-4111-8111-111111111111', 'Biology', 'BIO');
+INSERT INTO subjects (id, school_id, code, name)
+VALUES
+  ('50b00000-0000-4000-8000-000000000165', '11111111-1111-4111-8111-111111111111', 'CA-165', 'Computer Applications'),
+  ('50b00000-0000-4000-8000-000000000083', '11111111-1111-4111-8111-111111111111', 'CS-083', 'Computer Science'),
+  ('50b00000-0000-4000-8000-000000000041', '11111111-1111-4111-8111-111111111111', 'MATH-041', 'Mathematics')
+ON CONFLICT DO NOTHING;

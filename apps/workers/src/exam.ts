@@ -1,77 +1,57 @@
-import type { UserRole } from "./security.js";
+import type { AuthSession } from './auth';
+import { assertRoleAllowed, assertSchoolIsolation } from './security';
 
-export type ExamQuestionType = "mcq" | "descriptive";
+export type ViolationAction = 'allow' | 'warn' | 'pause_attempt';
 
-export type ExamQuestion = {
-  id: string;
-  prompt: string;
-  marks: number;
-  type: ExamQuestionType;
-};
+export interface IntegrityPolicy {
+  maxViolations: number;
+}
 
-export type ExamStatus = "draft" | "published" | "archived";
+export function evaluateIntegrityViolation(
+  currentViolations: number,
+  policy: IntegrityPolicy
+): { nextCount: number; action: ViolationAction; message: string } {
+  const nextCount = currentViolations + 1;
+  if (nextCount >= policy.maxViolations) {
+    return {
+      nextCount,
+      action: 'pause_attempt',
+      message: `Attempt paused after ${nextCount} focus/tab violations. Teacher authorization required to resume.`,
+    };
+  }
+  return {
+    nextCount,
+    action: 'warn',
+    message: `Focus change recorded (${nextCount}/${policy.maxViolations}). Repeated tab switches will lock this attempt.`,
+  };
+}
 
-export type Exam = {
-  id: string;
+export interface GradeApprovalInput {
   schoolId: string;
-  title: string;
-  status: ExamStatus;
-  questions: ExamQuestion[];
-  durationMinutes: number;
-};
-
-export function calculateExamTotalMarks(questions: ExamQuestion[]): number {
-  return questions.reduce(
-    (total, question) => total + Math.max(0, question.marks),
-    0,
-  );
+  questionMaxMarks: number;
+  aiSuggestedMarks?: number;
+  teacherFinalMarks: number;
+  teacherConfirmed: boolean;
 }
 
-export function canPublishExam(
-  userRole: UserRole,
-  userSchoolId: string,
-  examSchoolId: string,
-  examStatus: ExamStatus,
-  questions: ExamQuestion[],
-): boolean {
-  if (userSchoolId !== examSchoolId) return false;
-  if (examStatus !== "draft") return false;
-
-  const allowedRoles: UserRole[] = ["teacher", "school_admin"];
-  if (!allowedRoles.includes(userRole)) return false;
-
-  const totalMarks = calculateExamTotalMarks(questions);
-  return questions.length > 0 && totalMarks > 0;
-}
-
-export function evaluateExamScore(payload: {
-  correctAnswers: number;
-  totalQuestions: number;
-  totalMarks: number;
-}): {
-  score: number;
-  percentage: number;
-  passed: boolean;
+export function finalizeAnswerGrade(session: AuthSession, input: GradeApprovalInput): {
+  awardedMarks: number;
+  approvedBy: string;
+  approvedAt: string;
 } {
-  const totalQuestions = Math.max(0, payload.totalQuestions);
-  const correctAnswers = Math.max(
-    0,
-    Math.min(payload.correctAnswers, totalQuestions),
-  );
-  const totalMarks = Math.max(0, payload.totalMarks);
+  assertSchoolIsolation(session, input.schoolId);
+  assertRoleAllowed(session, ['teacher', 'school_admin']);
 
-  const percentage =
-    totalQuestions > 0
-      ? Math.round((correctAnswers / totalQuestions) * 100)
-      : 0;
-  const score =
-    totalMarks > 0
-      ? Math.round((correctAnswers / totalQuestions) * totalMarks)
-      : 0;
+  if (!input.teacherConfirmed) {
+    throw new Error('APPROVAL_REQUIRED: AI-suggested marks cannot be saved as final without explicit teacher approval');
+  }
+  if (input.teacherFinalMarks < 0 || input.teacherFinalMarks > input.questionMaxMarks) {
+    throw new Error(`INVALID_MARKS: Marks must be between 0 and ${input.questionMaxMarks}`);
+  }
 
   return {
-    score: Number.isFinite(score) ? score : 0,
-    percentage: Number.isFinite(percentage) ? percentage : 0,
-    passed: percentage >= 50,
+    awardedMarks: Number(input.teacherFinalMarks.toFixed(2)),
+    approvedBy: session.userId,
+    approvedAt: new Date().toISOString(),
   };
 }

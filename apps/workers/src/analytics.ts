@@ -1,60 +1,87 @@
-import type { UserRole } from "./security.js";
+export interface ScoreRecord {
+  subjectName: string;
+  topic: string;
+  obtainedMarks: number;
+  maxMarks: number;
+  attemptedAt: string;
+}
 
-export type DashboardRole =
-  | "platform_owner"
-  | "school_admin"
-  | "teacher"
-  | "student"
-  | "parent";
+export interface StudentAnalyticsSummary {
+  overallPercentage: number;
+  completedTests: number;
+  subjectAverages: Array<{ subject: string; percentage: number }>;
+  strongTopics: string[];
+  weakTopics: string[];
+  improvementDelta: number;
+}
 
-export function canAccessDashboard(
-  userRole: UserRole,
-  userSchoolId: string,
-  dashboardSchoolId: string,
-): boolean {
-  if (userRole === "platform_owner") {
-    return true;
+/**
+ * Documented Formula:
+ * - Subject Average (%) = (SUM(obtainedMarks) / SUM(maxMarks)) * 100
+ * - Weak Topics = Topics with accuracy < 60%
+ * - Strong Topics = Topics with accuracy >= 80%
+ * - Improvement Delta = Latest test % minus Earliest test %
+ */
+export function calculateStudentAnalytics(records: ScoreRecord[]): StudentAnalyticsSummary {
+  if (records.length === 0) {
+    return {
+      overallPercentage: 0,
+      completedTests: 0,
+      subjectAverages: [],
+      strongTopics: [],
+      weakTopics: [],
+      improvementDelta: 0,
+    };
   }
 
-  if (userSchoolId !== dashboardSchoolId) {
-    return false;
+  let totalObtained = 0;
+  let totalMax = 0;
+  const bySubject = new Map<string, { obtained: number; max: number }>();
+  const byTopic = new Map<string, { obtained: number; max: number }>();
+
+  const sorted = [...records].sort(
+    (a, b) => new Date(a.attemptedAt).getTime() - new Date(b.attemptedAt).getTime()
+  );
+
+  for (const r of sorted) {
+    totalObtained += r.obtainedMarks;
+    totalMax += r.maxMarks;
+
+    const sub = bySubject.get(r.subjectName) ?? { obtained: 0, max: 0 };
+    sub.obtained += r.obtainedMarks;
+    sub.max += r.maxMarks;
+    bySubject.set(r.subjectName, sub);
+
+    const top = byTopic.get(r.topic) ?? { obtained: 0, max: 0 };
+    top.obtained += r.obtainedMarks;
+    top.max += r.maxMarks;
+    byTopic.set(r.topic, top);
   }
 
-  const allowedRoles: UserRole[] = [
-    "school_admin",
-    "teacher",
-    "student",
-    "parent",
-  ];
+  const subjectAverages = Array.from(bySubject.entries()).map(([subject, val]) => ({
+    subject,
+    percentage: val.max > 0 ? Number(((val.obtained / val.max) * 100).toFixed(1)) : 0,
+  }));
 
-  return allowedRoles.includes(userRole);
-}
+  const strongTopics: string[] = [];
+  const weakTopics: string[] = [];
 
-export function computeCompletionRate(
-  completedAttempts: number,
-  assignedAttempts: number,
-): number {
-  if (assignedAttempts <= 0) return 0;
-  return Math.round((completedAttempts / assignedAttempts) * 100);
-}
+  for (const [topic, val] of byTopic.entries()) {
+    const pct = val.max > 0 ? (val.obtained / val.max) * 100 : 0;
+    if (pct >= 80) strongTopics.push(topic);
+    else if (pct < 60) weakTopics.push(topic);
+  }
 
-export function averageScore(scores: number[]): number {
-  if (!scores.length) return 0;
-  const total = scores.reduce((sum, score) => sum + score, 0);
-  return Math.round(total / scores.length);
-}
+  const firstPct = sorted[0].maxMarks > 0 ? (sorted[0].obtainedMarks / sorted[0].maxMarks) * 100 : 0;
+  const last = sorted[sorted.length - 1];
+  const lastPct = last.maxMarks > 0 ? (last.obtainedMarks / last.maxMarks) * 100 : 0;
 
-export function calculateOverdueRate(
-  overdueQueries: number,
-  totalQueries: number,
-): number {
-  if (totalQueries <= 0) return 0;
-  return Math.round((overdueQueries / totalQueries) * 100);
-}
-
-export function calculateImprovement(
-  currentAverageScore: number,
-  previousAverageScore: number,
-): number {
-  return currentAverageScore - previousAverageScore;
+  return {
+    overallPercentage: totalMax > 0 ? Number(((totalObtained / totalMax) * 100).toFixed(1)) : 0,
+    completedTests: records.length,
+    subjectAverages,
+    strongTopics,
+    weakTopics,
+    improvementDelta: Number((lastPct - firstPct).toFixed(1)),
+  };
 }

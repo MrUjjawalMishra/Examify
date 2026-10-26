@@ -1,133 +1,58 @@
-import type { UserRole } from "./security.js";
+import type { AuthSession } from './auth';
+import { assertRoleAllowed, assertSchoolIsolation } from './security';
 
-export type QueryStatus = "open" | "assigned" | "resolved" | "overdue";
-export type QueryPriority = "normal" | "urgent";
-export type CommunityVisibility = "public" | "private";
+export type QueryLifecycleStatus =
+  | 'open'
+  | 'assigned'
+  | 'in_progress'
+  | 'resolved'
+  | 'reopened'
+  | 'overdue';
 
-export type QueryTicket = {
-  id: string;
-  schoolId: string;
-  studentId: string;
-  teacherId?: string;
-  priority: QueryPriority;
-  status: QueryStatus;
-  dueAt?: string;
-};
+const MIN_SLA_HOURS = 48;
+const MAX_SLA_HOURS = 168; // 7 days
 
-export type Community = {
-  id: string;
-  schoolId: string;
-  name: string;
-  visibility: CommunityVisibility;
-  isMember: boolean;
-};
-
-export type Notification = {
-  schoolId: string;
-  userRole: UserRole;
-  title: string;
-  body: string;
-  isRead: boolean;
-  createdAt: string;
-};
-
-export function canCreateQuery(
-  userRole: UserRole,
-  userSchoolId: string,
-): boolean {
-  const allowedRoles: UserRole[] = [
-    "student",
-    "parent",
-    "teacher",
-    "school_admin",
-  ];
-  return userSchoolId.length > 0 && allowedRoles.includes(userRole);
+export function validateResolutionDeadlineHours(hours: number, schoolMin = MIN_SLA_HOURS, schoolMax = MAX_SLA_HOURS): void {
+  const effectiveMin = Math.max(MIN_SLA_HOURS, schoolMin);
+  const effectiveMax = Math.min(MAX_SLA_HOURS, schoolMax);
+  if (hours < effectiveMin || hours > effectiveMax) {
+    throw new Error(`INVALID_DEADLINE: Resolution deadline must be between ${effectiveMin} hours (48h) and ${effectiveMax} hours (7 days)`);
+  }
 }
 
-export function canAccessQuery(
-  userRole: UserRole,
-  userSchoolId: string,
-  querySchoolId: string,
-): boolean {
-  if (userSchoolId !== querySchoolId) {
-    return false;
+export function computeQueryStatus(
+  currentStatus: QueryLifecycleStatus,
+  deadlineIso: string,
+  nowMs = Date.now()
+): QueryLifecycleStatus {
+  if (currentStatus === 'resolved') return 'resolved';
+  const deadlineMs = new Date(deadlineIso).getTime();
+  if (nowMs > deadlineMs) {
+    return 'overdue';
   }
-
-  const allowedRoles: UserRole[] = [
-    "student",
-    "parent",
-    "teacher",
-    "school_admin",
-  ];
-  return allowedRoles.includes(userRole);
+  return currentStatus;
 }
 
-export function assignQuery(
-  userRole: UserRole,
-  userSchoolId: string,
-  targetSchoolId: string,
-): boolean {
-  if (userSchoolId !== targetSchoolId) {
-    return false;
-  }
-
-  const allowedRoles: UserRole[] = ["teacher", "school_admin"];
-  return allowedRoles.includes(userRole);
-}
-
-export function isQueryOverdue(
-  status: QueryStatus,
-  dueAt: string | null | undefined,
-): boolean {
-  if (!dueAt || status === "resolved") {
-    return false;
-  }
-
-  const dueDate = new Date(dueAt).getTime();
-  if (Number.isNaN(dueDate)) {
-    return false;
-  }
-
-  return status === "open" || status === "assigned" || status === "overdue"
-    ? dueDate <= Date.now()
-    : false;
-}
-
-export function canAccessCommunity(
-  userRole: UserRole,
-  userSchoolId: string,
-  communitySchoolId: string,
-  isMember: boolean,
-): boolean {
-  if (userSchoolId !== communitySchoolId) {
-    return false;
-  }
-
-  const allowedRoles: UserRole[] = [
-    "teacher",
-    "school_admin",
-    "student",
-    "parent",
-  ];
-  if (!allowedRoles.includes(userRole)) {
-    return false;
-  }
-
-  return isMember || userRole === "teacher" || userRole === "school_admin";
-}
-
-export function createNotification(
+export function transitionQueryStatus(
+  session: AuthSession,
   schoolId: string,
-  userRole: UserRole,
-  title: string,
-  body: string,
-): Notification {
-  return {
-    schoolId,
-    userRole,
-    title,
-    body,
-    isRead: false,
-    createdAt: new Date().toISOString(),
-  };
+  from: QueryLifecycleStatus,
+  to: QueryLifecycleStatus
+): QueryLifecycleStatus {
+  assertSchoolIsolation(session, schoolId);
+
+  if (to === 'reopened') {
+    assertRoleAllowed(session, ['student', 'school_admin']);
+    if (from !== 'resolved') {
+      throw new Error('INVALID_TRANSITION: Only resolved queries can be reopened');
+    }
+    return 'reopened';
+  }
+
+  if (to === 'resolved' || to === 'in_progress') {
+    assertRoleAllowed(session, ['teacher', 'school_admin']);
+    return to;
+  }
+
+  return to;
 }
