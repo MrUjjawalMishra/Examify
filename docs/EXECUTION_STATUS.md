@@ -25,3 +25,20 @@ No remote resources were created, no migrations were applied remotely, no produc
 Owner confirmed activation. Authenticated R2 bucket listing now succeeds and returns an empty list. The activation blocker is resolved; no bucket has been created yet.
 
 Session creation now requires the credential version observed during password verification and compares it atomically in the INSERT. A password reset between verification and session issuance therefore rejects the stale login. The D1 integration test covers this race.
+
+## School HTTP authentication and account-management implementation
+
+Implemented in `src/tenant-http.ts` as a dedicated tenant Worker handler (not yet wired into the production control-plane entry point):
+
+- POST /api/auth/login: persistent, password-verified school login; role comes from D1.
+- GET /api/auth/me: validated school session.
+- POST /api/auth/logout: session revocation and cookie expiry.
+- POST /api/auth/password: voluntary password change with current-password verification, version compare-and-swap, audit record and invalidation.
+- POST /api/users: administrator creates teacher; assigned teacher creates student. Transactional enrollment, audit and idempotency record. Replays return the existing user ID without reissuing a secret.
+- POST /api/students/reset-password: assigned teacher resets classroom credentials, audits action, increments credential version.
+
+Passwords use salted PBKDF2-SHA256 with 600,000 iterations and constant-time derived-key comparison. Generated classroom passwords can be shorter than eight characters; voluntarily selected replacement passwords require eight characters. No first-login password change is required. Current password work factor was exercised successfully inside workerd. Login limits are stored atomically in D1; JSON bodies are bounded to 4 KB; authenticated POST requests require a same-origin Origin header.
+
+Migrations 0002 and 0003 add persistent rate counters, classes, assignments, enrollment and idempotency records. Local HTTP tests use real password hashing and two real local D1 databases; no authentication responses are mocked. Class assignments and the initial school admin are test fixtures, not yet provisioned through owner/admin endpoints.
+
+Pending: control-plane owner login, automated school provisioning, school selection/routing, class-assignment HTTP management, XLSX/CSV imports, dashboard integration, private R2 endpoints, staging deployment and all assessment workflows. The existing prototype entry point and frontend remain unsuitable for production. No staging or production release is claimed.
