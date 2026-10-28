@@ -14,6 +14,14 @@ describe('Multi-School Tenant Isolation & RBAC', () => {
     expect(() => assertSchoolIsolation(teacherSchoolA, 'school-a')).not.toThrow();
   });
 
+  it('does not grant platform owners implicit tenant data access', () => {
+    for (const schoolId of [null, 'school-a']) {
+      expect(() => assertSchoolIsolation({
+        userId: 'owner-1', username: 'owner', role: 'platform_owner', schoolId,
+      }, 'school-a')).toThrow(/explicit audited authorization/);
+    }
+  });
+
   it('blocks access to another school tenant', () => {
     expect(() => assertSchoolIsolation(teacherSchoolA, 'school-b')).toThrow(/Cross-school tenant access denied/);
   });

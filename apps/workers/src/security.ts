@@ -5,8 +5,8 @@ export function assertSchoolIsolation(session: AuthSession, targetSchoolId: stri
     throw new Error('BAD_REQUEST: targetSchoolId is required');
   }
   if (session.role === 'platform_owner') {
-    // Platform owner manages school metadata; private student content still requires audited scope
-    return;
+    // Control-plane authority does not grant access to tenant educational data.
+    throw new Error('FORBIDDEN: Tenant support access requires explicit audited authorization');
   }
   if (!session.schoolId || session.schoolId !== targetSchoolId) {
     throw new Error('FORBIDDEN: Cross-school tenant access denied');

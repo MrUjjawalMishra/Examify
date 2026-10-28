@@ -3,6 +3,14 @@ import { evaluateIntegrityViolation, finalizeAnswerGrade } from '../src/exam';
 import type { AuthSession } from '../src/auth';
 
 describe('Examination Integrity & Teacher Grading Authority', () => {
+  it.each([
+    [NaN, 5], [Infinity, 5], [-Infinity, 5], [3, NaN], [3, Infinity], [0, -1], [6, 5], [-1, 5],
+  ])('rejects invalid score %s against maximum %s', (teacherFinalMarks, questionMaxMarks) => {
+    expect(() => finalizeAnswerGrade({
+      userId: 't-1', username: 'teacher1', schoolId: 'school-a', role: 'teacher',
+    }, { schoolId: 'school-a', teacherFinalMarks, questionMaxMarks, teacherConfirmed: true }))
+      .toThrow(/INVALID_MARKS/);
+  });
   it('warns on initial tab switch and pauses attempt on threshold violation', () => {
     const first = evaluateIntegrityViolation(0, { maxViolations: 3 });
     expect(first.action).toBe('warn');

@@ -1,0 +1,11 @@
+.verification/
+node_modules/
+dist/
+.wrangler/
+.env
+.env.*
+!.env.example
+.dev.vars
+.dev.vars.*
+coverage/
+test-results/

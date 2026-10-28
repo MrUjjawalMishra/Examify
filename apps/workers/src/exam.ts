@@ -45,7 +45,9 @@ export function finalizeAnswerGrade(session: AuthSession, input: GradeApprovalIn
   if (!input.teacherConfirmed) {
     throw new Error('APPROVAL_REQUIRED: AI-suggested marks cannot be saved as final without explicit teacher approval');
   }
-  if (input.teacherFinalMarks < 0 || input.teacherFinalMarks > input.questionMaxMarks) {
+  if (!Number.isFinite(input.questionMaxMarks) || input.questionMaxMarks < 0 ||
+      !Number.isFinite(input.teacherFinalMarks) ||
+      input.teacherFinalMarks < 0 || input.teacherFinalMarks > input.questionMaxMarks) {
     throw new Error(`INVALID_MARKS: Marks must be between 0 and ${input.questionMaxMarks}`);
   }
 
