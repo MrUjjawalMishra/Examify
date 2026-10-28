@@ -19,3 +19,9 @@ Tenant migration creates identity, users, hashed-token sessions and append-only 
 Local integration tests use actual workerd D1 bindings for two databases and verify cross-school token rejection, incorrect tenant identity, expiry boundary, school suspension, credential-version invalidation and logout. Password verification, owner authentication, HTTP endpoint integration, role dashboards and full provisioning are NOT completed by this foundation. The session creation helper is internal and must only be invoked after password verification.
 
 No remote resources were created, no migrations were applied remotely, no production code was replaced, and no AI requests were sent. Product acceptance remains incomplete.
+
+## R2 activation follow-up
+
+Owner confirmed activation. Authenticated R2 bucket listing now succeeds and returns an empty list. The activation blocker is resolved; no bucket has been created yet.
+
+Session creation now requires the credential version observed during password verification and compares it atomically in the INSERT. A password reset between verification and session issuance therefore rejects the stale login. The D1 integration test covers this race.

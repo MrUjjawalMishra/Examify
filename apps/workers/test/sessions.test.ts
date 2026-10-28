@@ -19,7 +19,7 @@ describe('Persistent sessions in isolated D1 databases', () => {
         await db.prepare("INSERT INTO users VALUES ('u','student.9b15','Student','student','test-only',1,1,0)").run();
       }
       const now = Date.now();
-      const session = await createSession(a, 'a', 'u', now);
+      const session = await createSession(a, 'a', 'u', 1, now);
       const request = new Request('https://examify.test/api/me', {headers: {Cookie: session.cookie.split(';')[0]}});
       expect((await getSession(a, 'a', request, now))?.userId).toBe('u');
       expect(await getSession(b, 'b', request, now)).toBeNull();
@@ -29,11 +29,12 @@ describe('Persistent sessions in isolated D1 databases', () => {
       expect(session.cookie).not.toContain(stored!.token_hash);
       await a.prepare("UPDATE tenant_identity SET status='suspended'").run();
       expect(await getSession(a, 'a', request, now)).toBeNull();
-      await expect(createSession(a, 'a', 'u', now)).rejects.toThrow('UNAUTHORIZED');
+      await expect(createSession(a, 'a', 'u', 1, now)).rejects.toThrow('UNAUTHORIZED');
       await a.prepare("UPDATE tenant_identity SET status='active'").run();
       await a.prepare('UPDATE users SET credential_version=2').run();
       expect(await getSession(a, 'a', request, now)).toBeNull();
-      const fresh = await createSession(a, 'a', 'u', now);
+      await expect(createSession(a, 'a', 'u', 1, now)).rejects.toThrow('UNAUTHORIZED');
+      const fresh = await createSession(a, 'a', 'u', 2, now);
       const freshRequest = new Request(request.url, {headers: {Cookie: fresh.cookie.split(';')[0]}});
       await revokeSession(a, freshRequest);
       expect(await getSession(a, 'a', freshRequest, now)).toBeNull();

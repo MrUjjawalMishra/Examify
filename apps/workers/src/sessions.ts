@@ -28,13 +28,15 @@ function readToken(request: Request): string | null {
 }
 
 /** Call only after successful password verification. School is deployment identity, not request input. */
-export async function createSession(db: D1Database, schoolId: string, userId: string, now = Date.now()) {
+export async function createSession(db: D1Database, schoolId: string, userId: string, verifiedCredentialVersion: number, now = Date.now()) {
+  if (!Number.isSafeInteger(verifiedCredentialVersion) || verifiedCredentialVersion < 1) throw new Error('UNAUTHORIZED');
   const token = Array.from(crypto.getRandomValues(new Uint8Array(32)), b => b.toString(16).padStart(2, '0')).join('');
   const hash = await digest(token);
   const result = await db.prepare(`INSERT INTO sessions (token_hash, user_id, credential_version, created_at, expires_at)
     SELECT ?, u.id, u.credential_version, ?, ? FROM users u, tenant_identity t
-    WHERE u.id = ? AND u.active = 1 AND t.singleton = 1 AND t.school_id = ? AND t.status = 'active'`)
-    .bind(hash, now, now + LIFETIME_SECONDS * 1000, userId, schoolId).run();
+    WHERE u.id = ? AND u.credential_version = ? AND u.active = 1
+      AND t.singleton = 1 AND t.school_id = ? AND t.status = 'active'`)
+    .bind(hash, now, now + LIFETIME_SECONDS * 1000, userId, verifiedCredentialVersion, schoolId).run();
   if (result.meta.changes !== 1) throw new Error('UNAUTHORIZED');
   return { cookie: sessionCookie(token), expiresAt: now + LIFETIME_SECONDS * 1000 };
 }
