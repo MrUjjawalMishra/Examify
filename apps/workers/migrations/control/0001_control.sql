@@ -1,0 +1,5 @@
+CREATE TABLE owners(id TEXT PRIMARY KEY,email TEXT NOT NULL UNIQUE,password_hash TEXT NOT NULL,active INTEGER NOT NULL DEFAULT 1,credential_version INTEGER NOT NULL DEFAULT 1);
+CREATE TABLE owner_sessions(token_hash TEXT PRIMARY KEY,owner_id TEXT NOT NULL REFERENCES owners(id),credential_version INTEGER NOT NULL,expires_at INTEGER NOT NULL);
+CREATE TABLE schools(id TEXT PRIMARY KEY,code TEXT NOT NULL UNIQUE COLLATE NOCASE,name TEXT NOT NULL,status TEXT NOT NULL CHECK(status IN('provisioning','active','suspended')),slot TEXT NOT NULL UNIQUE,request_id TEXT NOT NULL UNIQUE,created_at INTEGER NOT NULL);
+CREATE TABLE audit_events(id TEXT PRIMARY KEY,actor_id TEXT NOT NULL,action TEXT NOT NULL,target_id TEXT NOT NULL,created_at INTEGER NOT NULL);
+CREATE TABLE auth_limits(key TEXT PRIMARY KEY,window INTEGER NOT NULL,hits INTEGER NOT NULL);

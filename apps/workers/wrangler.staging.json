@@ -1,0 +1,44 @@
+{
+  "d1_databases": [
+    {
+      "migrations_dir": "migrations/control",
+      "database_name": "examify-staging-control",
+      "binding": "CONTROL",
+      "database_id": "d6971e11-d463-41f8-a5c1-7c93b98e57b0"
+    }
+  ],
+  "services": [
+    {
+      "binding": "TENANT_1",
+      "service": "examify-staging-school-1"
+    },
+    {
+      "binding": "TENANT_2",
+      "service": "examify-staging-school-2"
+    }
+  ],
+  "assets": {
+    "directory": "../web/dist",
+    "run_worker_first": [
+      "/api/*",
+      "/s/*"
+    ],
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application"
+  },
+  "observability": {
+    "traces": {
+      "enabled": true
+    },
+    "enabled": true
+  },
+  "workers_dev": true,
+  "main": "src/index.ts",
+  "account_id": "e746f9041a0f5eddfd51c206531b3393",
+  "name": "examify-staging",
+  "preview_urls": false,
+  "compatibility_flags": [
+    "nodejs_compat"
+  ],
+  "compatibility_date": "2026-10-28"
+}

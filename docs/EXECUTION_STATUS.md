@@ -1,44 +1,37 @@
-# Execution evidence — 28 October 2026
+# Execution status — 29 October 2026
 
-## Access and existing infrastructure
+## Integrated implementation
 
-Cloudflare MCP whoami and authenticated API reads succeeded. Account: e746f9041a0f5eddfd51c206531b3393. Confirmed Worker: examify, with static assets, no bindings, compatibility date 2026-10-19, enabled workers.dev and preview URLs. Existing deployment version: cb8df9f3-213c-4949-9215-fa67ee313d56. Address derived from the enabled Worker and account subdomain: https://examify.mr-ujjawalmishra.workers.dev. This is an existing deployment, not a newly delivered release.
+The live application entry point now uses the control gateway; public prototype analytics/mock AI endpoints are no longer served. React loads IntegratedApp rather than the synthetic prototype. Owner, school administrator, teacher and student interfaces use authenticated D1-backed APIs.
 
-No D1 databases exist. R2 API returned error 10042 requiring dashboard enablement. Connection has R2 read/write permissions; reconnecting is not the remedy. Owner must review billing and enable R2. Unrelated Pages project ujjawal is excluded from changes.
+Implemented: owner email/password login and logout; operator-only bootstrap; active-school search; dedicated-slot school reservation and initial-admin provisioning; suspension/reactivation; school-based login; secure persistent sessions; voluntary password changes; teacher creation; class/section/subject assignments; student creation and display-name corrections; account suspension; teacher-assisted resets; CSV/XLSX validation/preview/import; printable credentials; private image upload/list/download/delete with size/signature validation and ownership checks. Student credential conventions and no forced first-login change are preserved.
 
-cf auth whoami reports authenticated=true and tokenValid=true. Local Wrangler reports 4.153.0. Remote write/deployment has not been exercised; successful reads alone are not proof of a successful deployment.
+School identity is immutable in each dedicated tenant database and resolved through the central registry plus fixed service bindings. Owner sessions and school sessions are separate. Each school has a separate Worker, D1 database and private R2 bucket. Staging has two slots; expanding to five requires operator provisioning. This is not unlimited infrastructure orchestration.
 
-## Preserved baseline
+## Locally tested
 
-Commit 118094b on codex/production-foundation was pushed to MrUjjawalMishra/Examify. Contains previous tenant/score fixes, classroom credential generation, dependency repair, updated tooling, and removal of generated dependencies from Git tracking. All 37 baseline tests and Worker TypeScript checks passed after restart.
+Latest completed suite: **45 tests passed in 12 files**. Worker TypeScript and frontend TypeScript/production build passed. Tests use actual local workerd, separate D1 databases and R2 bindings, not mocked login responses. Integrated coverage includes owner login, C8/ABC creation, admin/teacher provisioning, assignment, 30 students, retry deduplication, unauthorized provisioning, private media ownership/isolation, student profile authorization, password resets, stale-session rejection, account/school suspension, direct tenant denial and owner logout. CSV and actual XLSX workbook parsing tests pass.
 
-## New session foundation
+Commands: `npm --prefix apps/workers run typecheck`, `npm --prefix apps/workers test`, `npm --prefix apps/web run build` (Node 24; run Vite from apps/web).
 
-Tenant migration creates identity, users, hashed-token sessions and append-only application audit tables. Schools use separate databases; tenant identity is checked on session creation and every lookup. Sessions enforce account activation, school activation, credential version and server expiry. Cookies use Secure, HttpOnly, SameSite=Strict and __Host- scope. Raw tokens are never stored in the database. Same-origin validation is provided for authenticated writes.
+## Staging deployed; verification incomplete
 
-Local integration tests use actual workerd D1 bindings for two databases and verify cross-school token rejection, incorrect tenant identity, expiry boundary, school suspension, credential-version invalidation and logout. Password verification, owner authentication, HTTP endpoint integration, role dashboards and full provisioning are NOT completed by this foundation. The session creation helper is internal and must only be invoked after password verification.
+URL: https://examify-staging.mr-ujjawalmishra.workers.dev
 
-No remote resources were created, no migrations were applied remotely, no production code was replaced, and no AI requests were sent. Product acceptance remains incomplete.
+Created three staging Workers, three D1 databases and two private R2 buckets. Control migration 0001 and tenant migrations 0001–0004 were applied remotely through Wrangler's migration ledger. INTERNAL_KEY was installed as a Worker secret, and a random staging-only owner was bootstrapped without publishing credentials. Resources and commands are in STAGING_OPERATIONS.md.
 
-## R2 activation follow-up
+Confirmed in the actual Chrome browser: owner login, C8 and ABC school creation, school search/selection, C8 administrator login, teacher creation, class/subject assignment and teacher login. Partial student imports persisted in D1. Full 30-row browser flow and subsequent live student/media/reset checks have **not passed**.
 
-Owner confirmed activation. Authenticated R2 bucket listing now succeeds and returns an empty list. The activation blocker is resolved; no bucket has been created yet.
+The deployed runtime rejected the earlier PBKDF2 work factor (600,000 iterations; runtime limit 100,000). New hashes now use native scrypt N=16384/r=8/p=5; the staging bootstrap owner was repaired. Local tests and real owner/admin/teacher authentication then passed.
 
-Session creation now requires the credential version observed during password verification and compares it atomically in the INSERT. A password reset between verification and session issuance therefore rejects the stale login. The D1 integration test covers this race.
+The next live failure is confirmed by Cloudflare telemetry: a tenant `/api/users` request was terminated with `outcome=exceededCpu`, CPU time 129 ms. Workers Free permits 10 ms. Full live verification requires owner approval/activation of Workers Paid ($5 USD/month minimum plus usage). No paid plan was enabled. Password security was not weakened to bypass this limit.
 
-## School HTTP authentication and account-management implementation
+Interrupted-import recovery now checks existing enrollments, rejects conflicting names before writing, and uses stable request IDs; repeated rows never return an old plaintext password. The frontend build passes, but the complete live recovery remains subject to the CPU-plan blocker.
 
-Implemented in `src/tenant-http.ts` as a dedicated tenant Worker handler (not yet wired into the production control-plane entry point):
+## Production and remaining scope
 
-- POST /api/auth/login: persistent, password-verified school login; role comes from D1.
-- GET /api/auth/me: validated school session.
-- POST /api/auth/logout: session revocation and cookie expiry.
-- POST /api/auth/password: voluntary password change with current-password verification, version compare-and-swap, audit record and invalidation.
-- POST /api/users: administrator creates teacher; assigned teacher creates student. Transactional enrollment, audit and idempotency record. Replays return the existing user ID without reissuing a secret.
-- POST /api/students/reset-password: assigned teacher resets classroom credentials, audits action, increments credential version.
+Production Worker `examify` was not modified. No production-ready claim is made. Examination persistence/scheduling, attempts/autosave/deadlines, objective and subjective grading, AI provider integration, paper/photo evaluation, results publication, integrity monitoring, subscriptions/usage accounting, automated retention, full load/security acceptance and production launch remain unfinished.
 
-Passwords use salted PBKDF2-SHA256 with 600,000 iterations and constant-time derived-key comparison. Generated classroom passwords can be shorter than eight characters; voluntarily selected replacement passwords require eight characters. No first-login password change is required. Current password work factor was exercised successfully inside workerd. Login limits are stored atomically in D1; JSON bodies are bounded to 4 KB; authenticated POST requests require a same-origin Origin header.
+Media is currently uploader-only, not assessment-aware sharing. Student edits currently correct display names; enrollment transfers are not implemented. The ExcelJS dependency audit reports two moderate findings via uuid (GHSA-w5hq-g745-h8pq); remediation is tracked. The large XLSX browser chunk is loaded on demand.
 
-Migrations 0002 and 0003 add persistent rate counters, classes, assignments, enrollment and idempotency records. Local HTTP tests use real password hashing and two real local D1 databases; no authentication responses are mocked. Class assignments and the initial school admin are test fixtures, not yet provisioned through owner/admin endpoints.
-
-Pending: control-plane owner login, automated school provisioning, school selection/routing, class-assignment HTTP management, XLSX/CSV imports, dashboard integration, private R2 endpoints, staging deployment and all assessment workflows. The existing prototype entry point and frontend remain unsuitable for production. No staging or production release is claimed.
+Latest source additions after the last remote bundle (HTTP error messaging) must be rebuilt and deployed with the final commit before declaring staging complete. Git delivery evidence is recorded separately after commit/push. The previous session's approval-service usage interruption has cleared; the remaining live blocker is Cloudflare CPU capacity and the owner's billing decision.

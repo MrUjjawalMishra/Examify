@@ -1,0 +1,31 @@
+{
+  "r2_buckets": [
+    {
+      "bucket_name": "examify-staging-school-1-private",
+      "binding": "FILES"
+    }
+  ],
+  "d1_databases": [
+    {
+      "migrations_dir": "migrations/tenant",
+      "database_name": "examify-staging-school-1",
+      "binding": "DB",
+      "database_id": "1e0658d7-d666-4a20-9c97-f156d7faf608"
+    }
+  ],
+  "observability": {
+    "traces": {
+      "enabled": true
+    },
+    "enabled": true
+  },
+  "workers_dev": false,
+  "main": "src/tenant-entry.ts",
+  "account_id": "e746f9041a0f5eddfd51c206531b3393",
+  "name": "examify-staging-school-1",
+  "preview_urls": false,
+  "compatibility_flags": [
+    "nodejs_compat"
+  ],
+  "compatibility_date": "2026-10-28"
+}

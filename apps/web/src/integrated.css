@@ -1,0 +1,235 @@
+.ex-app {
+  min-height: 100vh;
+  background: #f5f6fa;
+  color: #1b2035;
+  font:
+    15px/1.55 Inter,
+    system-ui,
+    sans-serif;
+}
+.ex-app * {
+  box-sizing: border-box;
+}
+.ex-app header {
+  height: 76px;
+  background: white;
+  border-bottom: 1px solid #e4e6ef;
+  display: flex;
+  align-items: center;
+  gap: 28px;
+  padding: 0 5%;
+}
+.brand {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  color: #5741bd;
+  font-size: 25px;
+  font-weight: 800;
+  text-decoration: none;
+}
+.brand span {
+  color: #20233a;
+  font-size: 22px;
+}
+.context {
+  color: #6c7080;
+  flex: 1;
+}
+.ex-app main {
+  max-width: 1240px;
+  margin: auto;
+  padding: 40px 28px;
+}
+.ex-app h1 {
+  font-size: 36px;
+  line-height: 1.2;
+  letter-spacing: -1px;
+  margin: 8px 0 14px;
+}
+.ex-app h2 {
+  font-size: 22px;
+  margin: 0 0 18px;
+}
+.ex-app h3 {
+  font-size: 17px;
+  margin-top: 28px;
+}
+.eyebrow {
+  color: #6550b8;
+  text-transform: uppercase;
+  font-weight: 700;
+  letter-spacing: 2px;
+  font-size: 12px;
+}
+.login {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 80px;
+  align-items: center;
+  max-width: 1000px;
+  margin: 45px auto;
+}
+.login h1 {
+  font-size: 48px;
+}
+.panel {
+  background: white;
+  border: 1px solid #e2e4ed;
+  border-radius: 14px;
+  padding: 28px;
+  margin-bottom: 24px;
+  box-shadow: 0 4px 16px #27204905;
+}
+.grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+}
+.ex-app label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  margin: 15px 0;
+}
+.ex-app input,
+.ex-app select {
+  width: 100%;
+  display: block;
+  padding: 11px 12px;
+  border: 1px solid #cdd1df;
+  background: white;
+  border-radius: 7px;
+  font: inherit;
+  margin-top: 6px;
+  color: #20233a;
+}
+.ex-app button {
+  padding: 10px 16px;
+  border: 1px solid #d6d8e5;
+  border-radius: 7px;
+  background: white;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 600;
+  color: #423b69;
+  margin: 5px 6px 5px 0;
+}
+.ex-app button.primary,
+.ex-app button.selected {
+  background: #5842bc;
+  color: white;
+  border-color: #5842bc;
+}
+.ex-app button:disabled {
+  opacity: 0.55;
+  cursor: wait;
+}
+.ex-app :focus-visible {
+  outline: 3px solid #b9aaf0;
+  outline-offset: 2px;
+}
+.ex-app nav {
+  display: flex;
+  margin-bottom: 24px;
+}
+.hint {
+  font-size: 12px;
+  color: #70758a;
+}
+.ex-app article {
+  padding: 15px 0;
+  border-bottom: 1px solid #edf0f5;
+}
+.ex-app article p {
+  margin: 4px 0;
+}
+.alert,
+.notice {
+  padding: 15px 20px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+}
+.alert {
+  background: #fff0ee;
+  color: #982f27;
+}
+.notice {
+  background: #edf7f0;
+  color: #25633c;
+}
+.scroll {
+  overflow: auto;
+  max-height: 380px;
+}
+.ex-app table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+.ex-app th,
+.ex-app td {
+  padding: 12px;
+  border-bottom: 1px solid #e8eaf1;
+  font-size: 13px;
+}
+.ex-app th {
+  background: #f6f7fb;
+}
+.page-heading {
+  margin-bottom: 30px;
+}
+.ex-app footer {
+  text-align: center;
+  color: #7a7e91;
+  padding: 30px;
+  font-size: 12px;
+}
+@media (max-width: 760px) {
+  .login,
+  .grid {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+  .login {
+    margin: 0;
+  }
+  .login h1 {
+    font-size: 34px;
+  }
+  .ex-app main {
+    padding: 24px 16px;
+  }
+  .panel {
+    padding: 20px;
+  }
+  .context {
+    display: none;
+  }
+  .ex-app header {
+    justify-content: space-between;
+  }
+  .ex-app h1 {
+    font-size: 28px;
+  }
+}
+@media print {
+  .ex-app header,
+  .ex-app footer,
+  .ex-app main > *:not(.credentials),
+  .credentials button {
+    display: none !important;
+  }
+  .credentials {
+    display: block !important;
+  }
+  .credentials article {
+    break-inside: avoid;
+    border: 1px dashed #999;
+    padding: 15px;
+    margin: 10px;
+  }
+  .credentials p {
+    color: black;
+  }
+}

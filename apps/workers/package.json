@@ -4,8 +4,9 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "dev": "wrangler dev",
-    "deploy": "wrangler deploy",
+    "dev": "wrangler dev -c wrangler.staging.json -c wrangler.staging-school-1.json -c wrangler.staging-school-2.json",
+    "deploy:staging": "wrangler deploy -c wrangler.staging-school-1.json && wrangler deploy -c wrangler.staging-school-2.json && wrangler deploy -c wrangler.staging.json",
+    "test:staging": "node scripts/staging-browser.mjs",
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit"
@@ -14,6 +15,7 @@
     "@cloudflare/workers-types": "^5.20261027.1",
     "@types/node": "^24.19.2",
     "miniflare": "^5.20261023.0-beta",
+    "playwright": "^1.62.1",
     "typescript": "^5.7.2",
     "vitest": "^4.1.12",
     "wrangler": "^4.153.0"

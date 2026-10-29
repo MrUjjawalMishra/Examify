@@ -2,7 +2,7 @@ name: Examify CI Verification
 
 on:
   push:
-    branches: [main, 'feat/**', 'fix/**']
+    branches: [main, 'feat/**', 'fix/**', 'codex/**']
   pull_request:
     branches: [main]
 
@@ -13,21 +13,23 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup Node.js 20
+      - name: Setup Node.js 24
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24
+
+      - name: Install locked dependencies
+        run: |
+          npm ci --prefix apps/web
+          npm ci --prefix apps/workers
 
       - name: Install & Verify Workers API + Automated Tests
         working-directory: apps/workers
         run: |
-          npm install
           npm run typecheck
           npm test
 
       - name: Install & Build Web Frontend
         working-directory: apps/web
         run: |
-          npm install
-          npm run typecheck
           npm run build
