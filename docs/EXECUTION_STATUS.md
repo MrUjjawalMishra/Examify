@@ -1,5 +1,19 @@
 # Execution status — 29 October 2026
 
+## Security verification — 30 October 2026
+
+Live Supabase settings confirm public signup disabled and anonymous sign-ins disabled. Real signup requests return `signup_disabled` and `anonymous_provider_disabled` respectively (HTTP 422). Admin provisioning and password login passed against the actual provider using one synthetic, provider-only fixture, retained for repeatable checks. It has no D1 identity or Examify permissions.
+
+Run `node apps/workers/scripts/verify-supabase.mjs --provision-test` from the repository root. Credentials and fixture passwords are stored only under ignored `.local/`; output includes only check labels. A prior 76-character fixture password was rejected by Supabase's 72-character maximum; the fixture was corrected and the live checks passed. The adapter's preprocessed passwords are 68 characters.
+
+The previous PowerShell 401 reports did not prove invalid keys: the browser-style User-Agent triggered Supabase's secret-key protection. A server HTTP client returned 200. The adapter now supplies an explicit server User-Agent and only sends Bearer authorization for legacy JWT keys. Seven adapter unit tests and TypeScript checks passed.
+
+Rotation remains unverified: a replacement secret was exposed in a screenshot. No Supabase management token/integration is available to rotate project keys. Do not deploy the credential until replacement and retirement are confirmed. Auth Admin API access does not grant project-management access.
+
+The managed-auth adapter and credential-operation module are work in progress, not yet connected to gateway/tenant login and provisioning handlers. Existing D1 workflow tests cover local password authentication, not real Supabase application integration. No new Cloudflare deployment, CPU measurement or end-to-end staging acceptance is claimed.
+
+Git history scan found no `sb_secret_` or `sbp_` credential-pattern matches. This limited scan is not a guarantee against other secret formats. Both local provider configuration and synthetic fixture files are excluded by Git.
+
 ## Integrated implementation
 
 The live application entry point now uses the control gateway; public prototype analytics/mock AI endpoints are no longer served. React loads IntegratedApp rather than the synthetic prototype. Owner, school administrator, teacher and student interfaces use authenticated D1-backed APIs.
@@ -24,9 +38,9 @@ Confirmed in the actual Chrome browser: owner login, C8 and ABC school creation,
 
 The deployed runtime rejected the earlier PBKDF2 work factor (600,000 iterations; runtime limit 100,000). New hashes now use native scrypt N=16384/r=8/p=5; the staging bootstrap owner was repaired. Local tests and real owner/admin/teacher authentication then passed.
 
-The next live failure is confirmed by Cloudflare telemetry: a tenant `/api/users` request was terminated with `outcome=exceededCpu`, CPU time 129 ms. Workers Free permits 10 ms. Full live verification requires owner approval/activation of Workers Paid ($5 USD/month minimum plus usage). No paid plan was enabled. Password security was not weakened to bypass this limit.
+The next live failure is confirmed by Cloudflare telemetry: a tenant `/api/users` request was terminated with `outcome=exceededCpu`, CPU time 129 ms. Workers Free permits 10 ms. The owner has explicitly rejected paid plans: the recurring expenditure limit is ₹0. Managed Supabase Free authentication is being integrated to move password hashing off Workers. No paid plan was enabled and password security was not weakened.
 
-Interrupted-import recovery now checks existing enrollments, rejects conflicting names before writing, and uses stable request IDs; repeated rows never return an old plaintext password. The frontend build passes, but the complete live recovery remains subject to the CPU-plan blocker.
+Interrupted-import recovery now checks existing enrollments, rejects conflicting names before writing, and uses stable request IDs; repeated rows never return an old plaintext password. The frontend build passes, but the complete live recovery remains subject to the pending managed-authentication integration.
 
 ## Production and remaining scope
 
