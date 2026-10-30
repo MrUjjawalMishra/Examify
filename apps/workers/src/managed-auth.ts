@@ -1,6 +1,6 @@
 import {createHmac,createHash} from 'node:crypto';
 
-export interface ManagedAuthConfig {SUPABASE_URL?:string;SUPABASE_ADMIN_KEY?:string;AUTH_PASSWORD_PEPPER?:string}
+export interface ManagedAuthConfig {AUTH_MODE?:'supabase';SUPABASE_URL?:string;SUPABASE_ADMIN_KEY?:string;AUTH_PASSWORD_PEPPER?:string}
 export interface AuthIdentity {id:string;scope:string}
 type User={id:string;email?:string;app_metadata?:Record<string,unknown>};
 /** Only provider password processing is external. No provider token grants Examify access. */

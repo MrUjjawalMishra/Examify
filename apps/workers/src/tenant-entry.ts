@@ -1,8 +1,9 @@
+import {ManagedAuth,provisioningId,type ManagedAuthConfig} from './managed-auth';
 import type { D1Database, R2Bucket } from "@cloudflare/workers-types";
 import { timingSafeEqual } from "node:crypto";
 import { tenantFetch, body, json } from "./tenant-http";
 import { hashPassword, validPassword } from "./passwords";
-interface Env {
+interface Env extends ManagedAuthConfig {
   DB: D1Database;
   INTERNAL_KEY: string;
   FILES?: R2Bucket;
@@ -31,6 +32,25 @@ export default {
         const identity = await env.DB.prepare(
           "SELECT school_id FROM tenant_identity WHERE singleton=1",
         ).first<{ school_id: string }>();
+        if(env.AUTH_MODE==='supabase'){
+          const auth=new ManagedAuth(env),id=provisioningId(d.schoolId,'platform','initial-admin');
+          if(identity&&identity.school_id!==d.schoolId)return json({error:'TENANT_CONFLICT'},409);
+          if(!identity)await env.DB.batch([
+            env.DB.prepare("INSERT INTO tenant_identity VALUES(1,?,'active')").bind(d.schoolId),
+            env.DB.prepare("INSERT INTO users(id,username,display_name,role,password_hash,active,created_at,managed_fingerprint) VALUES(?,?,'School administrator','school_admin','managed:pending',0,?,?)").bind(id,d.adminId,Date.now(),auth.fingerprint({id,scope:d.schoolId},d.password))
+          ]);
+          const admin=await env.DB.prepare('SELECT username,password_hash,managed_fingerprint FROM users WHERE id=?').bind(id).first<{username:string;password_hash:string;managed_fingerprint:string}>();
+          if(!admin||admin.username!==d.adminId)return json({error:'TENANT_CONFLICT'},409);
+          if(admin.password_hash==='managed:ready')return json({ok:true});
+          if(admin.password_hash!=='managed:pending')return json({error:'TENANT_CONFLICT'},409);
+          if(admin.managed_fingerprint!==auth.fingerprint({id,scope:d.schoolId},d.password))return json({error:'TENANT_CONFLICT'},409);
+          await auth.ensure({id,scope:d.schoolId},d.password);
+          await env.DB.batch([
+            env.DB.prepare("UPDATE users SET active=1,password_hash='managed:ready' WHERE id=? AND password_hash='managed:pending'").bind(id),
+            env.DB.prepare("INSERT INTO audit_events SELECT ?,?,'school_initialized',?,? WHERE changes()=1").bind(crypto.randomUUID(),id,d.schoolId,Date.now())
+          ]);
+          return json({ok:true});
+        }
         if (identity) {
           const admin = await env.DB.prepare(
             "SELECT id FROM users WHERE role='school_admin' AND active=1",
@@ -80,6 +100,7 @@ export default {
         DB: env.DB,
         SCHOOL_ID: identity.school_id,
         FILES: env.FILES,
+        AUTH_MODE:env.AUTH_MODE,SUPABASE_URL:env.SUPABASE_URL,SUPABASE_ADMIN_KEY:env.SUPABASE_ADMIN_KEY,AUTH_PASSWORD_PEPPER:env.AUTH_PASSWORD_PEPPER,
       });
     } catch {
       return json({ error: "INTERNAL_ERROR" }, 500);

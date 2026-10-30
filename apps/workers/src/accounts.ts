@@ -2,6 +2,8 @@ import type { D1Database } from '@cloudflare/workers-types';
 import type { TenantSession } from './sessions';
 import { hashPassword } from './passwords';
 import { studentCredentials, teacherUsername } from './credentials';
+import type {ManagedAuth} from './managed-auth';
+import {changeManagedPassword} from './managed-credentials';
 
 export async function createAccount(db:D1Database, actor:TenantSession, input:Record<string,unknown>) {
   if (actor.role !== 'school_admin' && actor.role !== 'teacher') throw new Error('FORBIDDEN');
@@ -35,7 +37,7 @@ export async function createAccount(db:D1Database, actor:TenantSession, input:Re
   return {id,username,initialPassword,role,replayed:false};
 }
 
-export async function resetStudent(db:D1Database,actor:TenantSession,studentId:string) {
+export async function resetStudent(db:D1Database,actor:TenantSession,studentId:string,auth?:ManagedAuth) {
   if(actor.role !== 'teacher') throw new Error('FORBIDDEN');
   const student=await db.prepare(`SELECT u.display_name,c.class_name,c.section,e.roll_number,u.credential_version
     FROM users u JOIN student_enrollments e ON e.student_id=u.id JOIN classes c ON c.id=e.class_id
@@ -44,6 +46,7 @@ export async function resetStudent(db:D1Database,actor:TenantSession,studentId:s
     .bind(studentId,actor.userId).first<{display_name:string;class_name:string;section:string;roll_number:string;credential_version:number}>();
   if(!student) throw new Error('FORBIDDEN');
   const {initialPassword}=studentCredentials({name:student.display_name,className:student.class_name,section:student.section,rollNumber:student.roll_number});
+  if(auth){await changeManagedPassword(db,auth,actor.schoolId,studentId,initialPassword,actor.userId);return {initialPassword};}
   const hash=await hashPassword(initialPassword);
   const result=await db.batch([
     db.prepare('UPDATE users SET password_hash=?,credential_version=credential_version+1 WHERE id=? AND credential_version=?')

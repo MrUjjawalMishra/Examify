@@ -1,3 +1,4 @@
+import {ManagedAuth, type ManagedAuthConfig} from './managed-auth';
 import type { D1Database } from "@cloudflare/workers-types";
 import { createHash, randomBytes } from "node:crypto";
 import { assertSameOrigin } from "./sessions";
@@ -7,7 +8,7 @@ import { DUMMY_HASH, validPassword, verifyPassword } from "./passwords";
 interface HttpService {
   fetch(request: Request): Promise<Response>;
 }
-export interface ControlEnv {
+export interface ControlEnv extends ManagedAuthConfig {
   CONTROL: D1Database;
   TENANT_1: HttpService;
   TENANT_2: HttpService;
@@ -83,6 +84,7 @@ export async function controlFetch(
           method: req.method,
           headers,
           body: req.body,
+          ...(req.body ? { duplex: "half" } : {}),
           redirect: "manual",
         }),
       );
@@ -111,7 +113,8 @@ export async function controlFetch(
           password_hash: string;
           credential_version: number;
         }>();
-      const verified = await verifyPassword(
+      const auth=env.AUTH_MODE==='supabase'?new ManagedAuth(env):undefined;
+      const verified = auth ? !!owner && owner.password_hash==='managed:ready' && await auth.verify({id:owner.id,scope:'platform'},data.password) : await verifyPassword(
         data.password,
         owner?.password_hash ?? DUMMY_HASH,
       );
@@ -299,6 +302,7 @@ export async function controlFetch(
       : json({ error: "NOT_FOUND" }, 404);
   } catch (e) {
     const message = e instanceof Error ? e.message : "";
+    if(message.startsWith('AUTH_PROVIDER_'))return json({error:message},message==='AUTH_PROVIDER_QUOTA'?429:503);
     if (message === "FORBIDDEN_ORIGIN") return json({ error: message }, 403);
     if (message.includes("UNIQUE constraint"))
       return json({ error: "CONFLICT_RETRY" }, 409);

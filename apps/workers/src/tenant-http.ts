@@ -1,3 +1,6 @@
+import {ManagedAuth, type ManagedAuthConfig} from './managed-auth';
+import {createManagedAccount} from './managed-provisioning';
+import {changeManagedPassword} from './managed-credentials';
 import type { D1Database, R2Bucket } from "@cloudflare/workers-types";
 import {
   assertSameOrigin,
@@ -20,7 +23,7 @@ import {
 } from "./management";
 import { mediaRequest } from "./media";
 
-export interface TenantBindings {
+export interface TenantBindings extends ManagedAuthConfig {
   DB: D1Database;
   SCHOOL_ID: string;
   FILES?: R2Bucket;
@@ -98,6 +101,7 @@ export async function tenantFetch(
 ): Promise<Response> {
   const path = new URL(request.url).pathname;
   try {
+    const auth=env.AUTH_MODE==='supabase'?new ManagedAuth(env):undefined;
     if (!["GET", "HEAD"].includes(request.method)) assertSameOrigin(request);
     if (path === "/api/auth/login" && request.method === "POST") {
       const ip = request.headers.get("CF-Connecting-IP") ?? "local";
@@ -114,16 +118,23 @@ export async function tenantFetch(
       if (!(await rateLimit(env.DB, `account:${username}`, 10)))
         return json({ error: "RATE_LIMITED" }, 429);
       const user = await env.DB.prepare(
-        `SELECT u.id,u.password_hash,u.credential_version FROM users u,tenant_identity t
+        `SELECT u.id,u.password_hash,u.credential_version,${auth?'u.managed_fingerprint':'NULL AS managed_fingerprint'} FROM users u,tenant_identity t
         WHERE u.username=? AND u.active=1 AND t.singleton=1 AND t.school_id=? AND t.status='active'`,
       )
         .bind(username, env.SCHOOL_ID)
         .first<{
           id: string;
           password_hash: string;
+          managed_fingerprint: string|null;
           credential_version: number;
         }>();
-      const verified = await verifyPassword(
+      if(auth&&user?.password_hash==='managed:updating'&&user.managed_fingerprint===auth.fingerprint({id:user.id,scope:env.SCHOOL_ID},data.password)){
+        // The durable intent was authorized before revocation. Possession of the
+        // exact intended password permits recovery, never a different password.
+        await changeManagedPassword(env.DB,auth,env.SCHOOL_ID,user.id,data.password,user.id);
+        return json({error:'CREDENTIALS_CHANGED_RETRY_LOGIN'},409);
+      }
+      const verified = auth ? !!user && user.password_hash==='managed:ready' && user.managed_fingerprint===auth.fingerprint({id:user.id,scope:env.SCHOOL_ID},data.password) && await auth.verify({id:user.id,scope:env.SCHOOL_ID},data.password) : await verifyPassword(
         data.password,
         user?.password_hash ?? DUMMY_HASH,
       );
@@ -159,7 +170,7 @@ export async function tenantFetch(
       if (!(await rateLimit(env.DB, `provision:${session.userId}`, 350)))
         return json({ error: "RATE_LIMITED" }, 429);
       return json(
-        await createAccount(env.DB, session, await body(request)),
+        auth ? await createManagedAccount(env.DB,session,await body(request),auth) : await createAccount(env.DB, session, await body(request)),
         201,
       );
     }
@@ -169,7 +180,7 @@ export async function tenantFetch(
       const data = await body(request);
       if (typeof data.studentId !== "string")
         return json({ error: "INVALID_ACCOUNT" }, 400);
-      return json(await resetStudent(env.DB, session, data.studentId));
+      return json(await resetStudent(env.DB, session, data.studentId,auth));
     }
     if (path === "/api/auth/password" && request.method === "POST") {
       if (!(await rateLimit(env.DB, `password:${session.userId}`, 10)))
@@ -182,15 +193,16 @@ export async function tenantFetch(
       )
         return json({ error: "INVALID_PASSWORD" }, 400);
       const user = await env.DB.prepare(
-        "SELECT password_hash,credential_version FROM users WHERE id=?",
+        auth ? 'SELECT password_hash,credential_version,managed_fingerprint FROM users WHERE id=?' : 'SELECT password_hash,credential_version,NULL AS managed_fingerprint FROM users WHERE id=?',
       )
         .bind(session.userId)
-        .first<{ password_hash: string; credential_version: number }>();
+        .first<{ password_hash: string; managed_fingerprint:string|null; credential_version: number }>();
       if (
         !user ||
-        !(await verifyPassword(data.currentPassword, user.password_hash))
+        !(auth ? user.password_hash==='managed:ready' && user.managed_fingerprint===auth.fingerprint({id:session.userId,scope:env.SCHOOL_ID},data.currentPassword) && await auth.verify({id:session.userId,scope:env.SCHOOL_ID},data.currentPassword) : await verifyPassword(data.currentPassword, user.password_hash))
       )
         return json({ error: "INVALID_CREDENTIALS" }, 401);
+      if(auth){await changeManagedPassword(env.DB,auth,env.SCHOOL_ID,session.userId,data.newPassword,session.userId,user.credential_version);return json({ok:true},200,await revokeSession(env.DB,request));}
       const hash = await hashPassword(data.newPassword);
       // Audit insertion is conditional on the successful CAS in the same transaction.
       const results = await env.DB.batch([
@@ -209,6 +221,8 @@ export async function tenantFetch(
     return json({ error: "NOT_FOUND" }, 404);
   } catch (error) {
     const message = error instanceof Error ? error.message : "";
+    if(message.startsWith('AUTH_PROVIDER_'))return json({error:message},message==='AUTH_PROVIDER_QUOTA'?429:503);
+    if(message==='CREDENTIAL_OPERATION_PENDING'||message==='AUTH_IDENTITY_CONFLICT')return json({error:message},409);
     if (message === "FORBIDDEN_ORIGIN") return json({ error: message }, 403);
     if (message === "FORBIDDEN") return json({ error: message }, 403);
     if (message === "INVALID_ACCOUNT" || message.startsWith("INVALID_"))

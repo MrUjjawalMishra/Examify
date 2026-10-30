@@ -40,5 +40,9 @@
   "compatibility_flags": [
     "nodejs_compat"
   ],
-  "compatibility_date": "2026-10-28"
+  "compatibility_date": "2026-10-28",
+  "vars": {
+    "AUTH_MODE": "supabase",
+    "SUPABASE_URL": "https://trrwrjetxfrgvysciihq.supabase.co"
+  }
 }
