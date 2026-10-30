@@ -6,7 +6,7 @@ type User={id:string;email?:string;app_metadata?:Record<string,unknown>};
 /** Only provider password processing is external. No provider token grants Examify access. */
 export class ManagedAuth {
  private readonly origin:string;
- constructor(private readonly config:ManagedAuthConfig,private readonly transport:typeof fetch=fetch){
+ constructor(private readonly config:ManagedAuthConfig,private readonly transport:typeof fetch=(...args)=>fetch(...args)){
   const url=new URL(config.SUPABASE_URL??'https://unconfigured.invalid');
   if(url.protocol!=='https:'||! /^[a-z0-9]+\.supabase\.co$/.test(url.hostname)||url.pathname!=='/'||url.search||url.hash||url.username||url.password||!config.SUPABASE_ADMIN_KEY||!config.AUTH_PASSWORD_PEPPER||config.AUTH_PASSWORD_PEPPER.length<64)throw Error('AUTH_PROVIDER_UNCONFIGURED');
   this.origin=url.origin;

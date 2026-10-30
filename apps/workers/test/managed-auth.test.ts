@@ -2,6 +2,16 @@ import {expect,it} from 'vitest';
 import {ManagedAuth,provisioningId} from '../src/managed-auth';
 const config={SUPABASE_URL:'https://example.supabase.co',SUPABASE_ADMIN_KEY:'test-key',AUTH_PASSWORD_PEPPER:'f'.repeat(64)};
 const identity={id:provisioningId('school-a','teacher','request'),scope:'school-a'};
+it('does not bind the Workers global fetch function to the adapter instance',async()=>{
+ const original=globalThis.fetch;
+ try{
+  globalThis.fetch=function(this:unknown){
+   expect(this).not.toBeInstanceOf(ManagedAuth);
+   return Promise.resolve(Response.json({user:{id:identity.id,email:identity.id+'@accounts.examify.invalid',app_metadata:{examify_scope:identity.scope}}}));
+  };
+  expect(await new ManagedAuth(config).verify(identity,'password')).toBe(true);
+ }finally{globalThis.fetch=original;}
+});
 it('uses server headers and reserves Bearer authorization for legacy JWT keys',async()=>{
  for(const key of ['sb_secret_test','eyJlegacy']){
   const auth=new ManagedAuth({...config,SUPABASE_ADMIN_KEY:key},async(_url,init)=>{
