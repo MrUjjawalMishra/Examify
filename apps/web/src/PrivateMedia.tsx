@@ -30,7 +30,8 @@ export function PrivateMedia({ base }: { base: string }) {
         headers: { "Content-Type": file.type },
         body: file,
       });
-      if (!r.ok) throw Error((await r.json()).error);
+      const result = await r.json();
+      if (!r.ok) throw Error(result.error);
       await refresh();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Upload failed");

@@ -2,6 +2,9 @@ import { chromium } from "playwright";
 import { readFile, writeFile, mkdir } from "node:fs/promises";
 import assert from "node:assert/strict";
 const origin = "https://examify-staging.mr-ujjawalmishra.workers.dev";
+const studentRoll=process.env.EXAMIFY_TEST_ROLL??'1';
+if(!/^(?:[1-9]|[12][0-9]|30)$/.test(studentRoll))throw Error('Invalid synthetic test roll');
+const studentUsername=`test.student.9b${studentRoll}`,studentPassword=`test.9b${studentRoll}`;
 const credentialFile = new URL(
   "../../../.local/staging-credentials.json",
   import.meta.url,
@@ -11,6 +14,7 @@ const browser = await chromium.launch({
   channel: process.env.EXAMIFY_BROWSER_CHANNEL ?? "chrome",
   headless: true,
 });
+const deadline = setTimeout(() => { console.error("Staging browser test exceeded 180 seconds"); process.exit(1); }, 180000);
 const context = await browser.newContext({
     viewport: { width: 1365, height: 900 },
   }),
@@ -31,7 +35,12 @@ const response = async (path, action) => {
   await action();
   const r = await waiter;
   assert.ok(r.ok(), `${path}: ${r.status()} ${await r.text()}`);
-  return r.json();
+  let timer;
+  try {
+    return await Promise.race([r.json(),new Promise((_,reject)=>{
+      timer=setTimeout(()=>reject(Error(`Response body timed out: ${path}`)),15000);
+    })]);
+  } finally {clearTimeout(timer);}
 };
 const login = async (username, password) => {
   await page.getByLabel("Account ID", { exact: true }).fill(username);
@@ -71,7 +80,7 @@ try {
       await page.getByText(`Test School ${code}`, { exact: true }).waitFor();
     }
   }
-  record("Two school environments created and listed");
+  record("Two school environments verified and listed");
   await page.getByRole("button", { name: "Sign out" }).click();
   await page.goto(origin + "/");
   await page.getByLabel("Find your school").fill("C8");
@@ -97,7 +106,7 @@ try {
   await response("/s/C8/api/assignments", () =>
     page.getByRole("button", { name: "Assign teacher" }).click(),
   );
-  record("Teacher creation and Class 9B subject assignment");
+  record("Teacher account verified and Class 9B subject assignment saved");
   await page.getByRole("button", { name: "Sign out" }).click();
   await login(c.teacher.username, c.teacher.initialPassword);
   await page.getByRole("heading", { name: "Your students" }).waitFor();
@@ -140,9 +149,10 @@ try {
     fullPage: true,
   });
   await page.getByRole("button", { name: "Sign out" }).click();
-  await login("test.student.9b1", "test.9b1");
+  await login(studentUsername, studentPassword);
   await page.getByRole("heading", { name: "My profile" }).waitFor();
   record("Student browser login and database profile");
+  record("Starting private-image upload");
   const upload = await response("/s/C8/api/media", () =>
     page
       .getByLabel("Private image")
@@ -181,7 +191,7 @@ try {
   assert.equal((await api("/api/owner/schools", {})).status, 401);
   record("Live cross-school and owner authorization denial");
   const me = await (await api("/s/C8/api/auth/me")).json();
-  await page.getByLabel("Current password", { exact: true }).fill("test.9b1");
+  await page.getByLabel("Current password", { exact: true }).fill(studentPassword);
   await page
     .getByLabel("New password", { exact: true })
     .fill("Voluntary-test-change-2026");
@@ -189,7 +199,7 @@ try {
     page.getByRole("button", { name: "Change password", exact: true }).click(),
   );
   assert.equal((await api("/s/C8/api/dashboard")).status, 401);
-  await login("test.student.9b1", "Voluntary-test-change-2026");
+  await login(studentUsername, "Voluntary-test-change-2026");
   record("Voluntary browser password change invalidates prior session");
   const changedCookie = (await context.cookies())
     .filter((x) => x.name === "__Host-examify")
@@ -203,7 +213,7 @@ try {
   const row = page
     .getByRole("row")
     .filter({
-      has: page.getByRole("cell", { name: "test.student.9b1", exact: true }),
+      has: page.getByRole("cell", { name: studentUsername, exact: true }),
     });
   await response("/s/C8/api/students/reset-password", () =>
     row.getByRole("button", { name: "Reset password" }).click(),
@@ -224,8 +234,14 @@ try {
       2,
     ),
   );
+} catch(error) {
+  console.error("Staging browser failure: " + (error instanceof Error ? error.message.split("\n")[0] : "unknown"));
+  throw error;
 } finally {
+  clearTimeout(deadline);
+  const closeDeadline=setTimeout(()=>process.exit(1),10000);
   await browser.close();
+  clearTimeout(closeDeadline);
 }
 
 
