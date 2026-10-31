@@ -25,7 +25,8 @@ export class ManagedAuth {
   const headers:Record<string,string>={apikey:this.config.SUPABASE_ADMIN_KEY!,'Content-Type':'application/json','User-Agent':'Examify-Server/1.0'};
   if(this.config.SUPABASE_ADMIN_KEY!.startsWith('eyJ'))headers.Authorization='Bearer '+this.config.SUPABASE_ADMIN_KEY!;
   let response:Response;
-  try{response=await this.transport(this.origin+'/auth/v1'+path,{method,headers,body:data===undefined?undefined:JSON.stringify(data),redirect:'error',signal:AbortSignal.timeout(8000)});}catch{throw Error('AUTH_PROVIDER_UNAVAILABLE');}
+  try{response=await this.transport(this.origin+'/auth/v1'+path,{method,headers,body:data===undefined?undefined:JSON.stringify(data),redirect:'manual',signal:AbortSignal.timeout(8000)});}catch{throw Error('AUTH_PROVIDER_UNAVAILABLE');}
+  if(response.status>=300&&response.status<400)throw Error('AUTH_PROVIDER_REDIRECT');
   if(response.status===429)throw Error('AUTH_PROVIDER_QUOTA');
   if(response.status>=500)throw Error('AUTH_PROVIDER_UNAVAILABLE');
   // Bound upstream responses and never surface provider text, tokens or secrets.

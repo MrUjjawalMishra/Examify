@@ -1,3 +1,6 @@
+## Runtime correction — 31 October 2026
+
+The prior staged owner login failed with AUTH_PROVIDER_UNAVAILABLE. An actual workerd regression test reproduced the failure; changing the provider fetch redirect mode from unsupported `error` to `manual`, while explicitly rejecting all 3xx responses, made the runtime test pass. The earlier global-fetch binding change alone did not resolve the deployed failure. No provider credential is forwarded on redirects. Staging acceptance must be rerun after this correction is deployed.
 # Execution status — 29 October 2026
 
 ## Security verification — 30 October 2026

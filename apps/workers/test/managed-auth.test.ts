@@ -2,6 +2,13 @@ import {expect,it} from 'vitest';
 import {ManagedAuth,provisioningId} from '../src/managed-auth';
 const config={SUPABASE_URL:'https://example.supabase.co',SUPABASE_ADMIN_KEY:'test-key',AUTH_PASSWORD_PEPPER:'f'.repeat(64)};
 const identity={id:provisioningId('school-a','teacher','request'),scope:'school-a'};
+it('rejects provider redirects without forwarding credentials',async()=>{
+ const auth=new ManagedAuth(config,async(_url,init)=>{
+  expect(init?.redirect).toBe('manual');
+  return new Response(null,{status:302,headers:{Location:'https://other.invalid'}});
+ });
+ await expect(auth.verify(identity,'password')).rejects.toThrow('AUTH_PROVIDER_REDIRECT');
+});
 it('does not bind the Workers global fetch function to the adapter instance',async()=>{
  const original=globalThis.fetch;
  try{
