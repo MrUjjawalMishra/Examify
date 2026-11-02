@@ -22,6 +22,7 @@ import {
   editStudent,
 } from "./management";
 import { mediaRequest } from "./media";
+import {paperRequest} from './papers';
 
 export interface TenantBindings extends ManagedAuthConfig {
   DB: D1Database;
@@ -38,7 +39,7 @@ export function json(data: unknown, status = 200, cookie?: string): Response {
   if (cookie) headers["Set-Cookie"] = cookie;
   return new Response(JSON.stringify(data), { status, headers });
 }
-export async function body(request: Request): Promise<Record<string, unknown>> {
+export async function body(request: Request,maxBytes=4096): Promise<Record<string, unknown>> {
   if (!request.headers.get("Content-Type")?.startsWith("application/json"))
     throw new Error("INVALID_BODY");
   const reader = request.body?.getReader();
@@ -50,7 +51,7 @@ export async function body(request: Request): Promise<Record<string, unknown>> {
       const next = await reader.read();
       if (next.done) break;
       size += next.value.byteLength;
-      if (size > 4096) {
+      if (size > maxBytes) {
         await reader.cancel();
         throw new Error("INVALID_BODY");
       }
@@ -154,6 +155,10 @@ export async function tenantFetch(
     if (!session) return json({ error: "UNAUTHORIZED" }, 401);
     if (path === "/api/auth/me" && request.method === "GET")
       return json(session);
+    if(path==='/api/papers'||path.startsWith('/api/papers/')){
+      if(request.method==='POST'&&!(await rateLimit(env.DB,`papers:${session.userId}`,30)))return json({error:'RATE_LIMITED'},429);
+      return await paperRequest(request,env.DB,session);
+    }
     if (path === "/api/dashboard" && request.method === "GET")
       return json(await dashboard(env.DB, session));
     if (path === "/api/assignments" && request.method === "POST")

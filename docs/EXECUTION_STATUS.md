@@ -1,54 +1,34 @@
-## Runtime correction — 31 October 2026
+# Execution status — 2 November 2026
 
-The prior staged owner login failed with AUTH_PROVIDER_UNAVAILABLE. An actual workerd regression test reproduced the failure; changing the provider fetch redirect mode from unsupported `error` to `manual`, while explicitly rejecting all 3xx responses, made the runtime test pass. The earlier global-fetch binding change alone did not resolve the deployed failure. No provider credential is forwarded on redirects. Staging acceptance must be rerun after this correction is deployed.
-# Execution status — 29 October 2026
+## Managed authentication: staging verified
 
-## Security verification — 30 October 2026
+Commit `56cbf35ab34a75df3dfcdbb172085e07bcf8a5f5` is pushed to `codex/production-foundation`. Live URL: https://examify-staging.mr-ujjawalmishra.workers.dev . Production Worker `examify` was not changed.
 
-Live Supabase settings confirm public signup disabled and anonymous sign-ins disabled. Real signup requests return `signup_disabled` and `anonymous_provider_disabled` respectively (HTTP 422). Admin provisioning and password login passed against the actual provider using one synthetic, provider-only fixture, retained for repeatable checks. It has no D1 identity or Examify permissions.
+Versions verified on 31 October:
+- Gateway: `302db74e-5a36-4a6e-ad69-eb31e8c2088c`
+- School 1: `9a1c4597-c449-401c-a1dc-13493b7ba26b`
+- School 2: `f280e4f8-aca6-4da6-a2fc-d69e0b3ddc40`
 
-Run `node apps/workers/scripts/verify-supabase.mjs --provision-test` from the repository root. Credentials and fixture passwords are stored only under ignored `.local/`; output includes only check labels. A prior 76-character fixture password was rejected by Supabase's 72-character maximum; the fixture was corrected and the live checks passed. The adapter's preprocessed passwords are 68 characters.
+The completed real-browser workflow verified owner login; C8/ABC environment listing; school selection and admin login; existing teacher login and subject assignment; a 30-student CSV roster including retry recovery; student profile; private R2 image upload; cross-school/owner access denial; voluntary password change; teacher reset; invalidation of prior student sessions; and no browser JavaScript errors. Existing schools/teacher were reused, not recreated in that run. Local integration tests separately exercise new school and teacher provisioning. Evidence: ignored `test-results/staging-browser.json`, completed 2026-10-31T02:43:41.571Z.
 
-The previous PowerShell 401 reports did not prove invalid keys: the browser-style User-Agent triggered Supabase's secret-key protection. A server HTTP client returned 200. The adapter now supplies an explicit server User-Agent and only sends Bearer authorization for legacy JWT keys. Seven adapter unit tests and TypeScript checks passed. The full suite now passes 53 tests across 14 files, including managed-auth owner login, two-school provisioning, school-admin login, teacher/student creation, 30 students, recovery, changes/resets and invalidation using actual local D1 plus a provider contract double. The frontend production build and Wrangler gateway/tenant dry runs pass.
+Cloudflare telemetry sampled 156 completed invocations of those versions over the queried 20-minute window: maximum CPU 9 ms, zero exceededCpu outcomes. Owner login max 5 ms, school login max 7 ms, student creation max 9 ms, password change 9 ms, reset 6 ms. This is workflow evidence, not a 250-concurrent-user load test or a guarantee for every request.
 
-The owner confirmed the local key was updated in response to the replacement/retirement request. The configured replacement passes real provider checks. Retirement is owner-attested, not independently verified through management access; Auth Admin API access does not grant project-management access.
+56 tests passed in 15 files before paper development, with TypeScript checks, frontend build and real workerd transport regression. The first managed deployment failed because Workers rejected fetch redirect mode `error`; manual handling now rejects every 3xx without forwarding credentials. The browser upload test subsequently found unread response-body behavior; the UI now consumes the successful response before refreshing, and full acceptance passed.
 
-Managed authentication is now connected to gateway owner login, school provisioning, school-role login, teacher/student creation, voluntary password changes and teacher resets when AUTH_MODE=supabase. D1 remains authoritative for roles, assignments, active status and versioned sessions. Supabase tokens never authorize Examify requests. Pending accounts are inactive. Password operations revoke sessions first and persist durable recovery intent. Login also checks a keyed password-intent fingerprint so a delayed provider update cannot revive an old password. Exact intended-password retries can recover an interrupted change. No new Cloudflare deployment, CPU measurement or end-to-end staging acceptance is claimed yet.
+## Security and migration
 
-Git history scan found no `sb_secret_` or `sbp_` credential-pattern matches. This limited scan is not a guarantee against other secret formats. Both local provider configuration and synthetic fixture files are excluded by Git.
+Public Supabase signup and anonymous signin are disabled; real requests returned signup_disabled and anonymous_provider_disabled. Administrative provider provisioning and password login passed. The owner confirmed replacement of the exposed key in response to the retirement request; retirement is owner-attested, not independently inspected through management access. The replacement was verified and installed only as staging Worker secrets. Secrets and synthetic credentials remain ignored under `.local/`. Prior Git/source/bundle scans found no matches for the checked Supabase secret formats; this is not a universal secret-scan guarantee.
 
-## Integrated implementation
+22 existing synthetic staging accounts were migrated without changing their verified passwords. All three D1 databases were exported first; backups remain under ignored `.local/managed-backup-*`. Tenant migration 0005 was applied remotely. Teacher/student creation reserves inactive D1 identities before provider provisioning. Password changes revoke sessions first and persist recovery intent. D1 remains authoritative for roles, assignments, suspension and versioned sessions. Provider tokens alone never authorize the application. Dedicated school Workers, databases and private R2 buckets are preserved.
 
-The live application entry point now uses the control gateway; public prototype analytics/mock AI endpoints are no longer served. React loads IntegratedApp rather than the synthetic prototype. Owner, school administrator, teacher and student interfaces use authenticated D1-backed APIs.
+See MANAGED_AUTH_OPERATIONS.md for configuration, pepper preservation and partial-failure recovery. No paid Cloudflare or Supabase plan was enabled. Expenditure authorization remains ₹0.
 
-Implemented: owner email/password login and logout; operator-only bootstrap; active-school search; dedicated-slot school reservation and initial-admin provisioning; suspension/reactivation; school-based login; secure persistent sessions; voluntary password changes; teacher creation; class/section/subject assignments; student creation and display-name corrections; account suspension; teacher-assisted resets; CSV/XLSX validation/preview/import; printable credentials; private image upload/list/download/delete with size/signature validation and ownership checks. Student credential conventions and no forced first-login change are preserved.
+## Question papers: implementation in progress
 
-School identity is immutable in each dedicated tenant database and resolved through the central registry plus fixed service bindings. Owner sessions and school sessions are separate. Each school has a separate Worker, D1 database and private R2 bucket. Staging has two slots; expanding to five requires operator provisioning. This is not unlimited infrastructure orchestration.
+New migration 0006 adds persistent question papers. Authenticated staff APIs and a teacher/admin UI support assigned-class/subject papers, multiple-choice answer keys, written-answer rubrics, bounded marks, immutable saved papers and idempotent creation. Students cannot access this staff paper library. The two new validation/D1 HTTP tests passed. This addition is not yet staging verified.
 
-## Locally tested
+## Remaining product and release gates
 
-Latest completed suite: **45 tests passed in 12 files**. Worker TypeScript and frontend TypeScript/production build passed. Tests use actual local workerd, separate D1 databases and R2 bindings, not mocked login responses. Integrated coverage includes owner login, C8/ABC creation, admin/teacher provisioning, assignment, 30 students, retry deduplication, unauthorized provisioning, private media ownership/isolation, student profile authorization, password resets, stale-session rejection, account/school suspension, direct tenant denial and owner logout. CSV and actual XLSX workbook parsing tests pass.
+Scheduling, attempts/autosave/deadlines, grading, publication, examination integrity, approved free AI conversion/evaluation, physical-paper workflows, assessment-aware image sharing and analytics remain unfinished. No fake AI results are served. R2 currently has per-user upload limits, but aggregate budgets/retention are still needed before a broad zero-cost launch; free allowances alone are not a spending cap. Load testing, broader security acceptance and production release remain outstanding.
 
-Commands: `npm --prefix apps/workers run typecheck`, `npm --prefix apps/workers test`, `npm --prefix apps/web run build` (Node 24; run Vite from apps/web).
-
-## Staging deployed; verification incomplete
-
-URL: https://examify-staging.mr-ujjawalmishra.workers.dev
-
-Created three staging Workers, three D1 databases and two private R2 buckets. Control migration 0001 and tenant migrations 0001–0004 were applied remotely through Wrangler's migration ledger. INTERNAL_KEY was installed as a Worker secret, and a random staging-only owner was bootstrapped without publishing credentials. Resources and commands are in STAGING_OPERATIONS.md.
-
-Confirmed in the actual Chrome browser: owner login, C8 and ABC school creation, school search/selection, C8 administrator login, teacher creation, class/subject assignment and teacher login. Partial student imports persisted in D1. Full 30-row browser flow and subsequent live student/media/reset checks have **not passed**.
-
-The deployed runtime rejected the earlier PBKDF2 work factor (600,000 iterations; runtime limit 100,000). New hashes now use native scrypt N=16384/r=8/p=5; the staging bootstrap owner was repaired. Local tests and real owner/admin/teacher authentication then passed.
-
-The next live failure is confirmed by Cloudflare telemetry: a tenant `/api/users` request was terminated with `outcome=exceededCpu`, CPU time 129 ms. Workers Free permits 10 ms. The owner has explicitly rejected paid plans: the recurring expenditure limit is ₹0. Managed Supabase Free authentication is being integrated to move password hashing off Workers. No paid plan was enabled and password security was not weakened.
-
-Interrupted-import recovery now checks existing enrollments, rejects conflicting names before writing, and uses stable request IDs; repeated rows never return an old plaintext password. The frontend build passes, but the complete live recovery remains subject to the pending managed-authentication integration.
-
-## Production and remaining scope
-
-Production Worker `examify` was not modified. No production-ready claim is made. Examination persistence/scheduling, attempts/autosave/deadlines, objective and subjective grading, AI provider integration, paper/photo evaluation, results publication, integrity monitoring, subscriptions/usage accounting, automated retention, full load/security acceptance and production launch remain unfinished.
-
-Media is currently uploader-only, not assessment-aware sharing. Student edits currently correct display names; enrollment transfers are not implemented. The ExcelJS dependency audit reports two moderate findings via uuid (GHSA-w5hq-g745-h8pq); remediation is tracked. The large XLSX browser chunk is loaded on demand.
-
-Implementation commit 8b43e98589fdbfb9146a750ea335792278fb9d95 was pushed to codex/production-foundation and deployed to all three staging Workers with version tag 8b43e98. Gateway version: 49cdbc76-1097-41cb-b348-bb61368253ca; tenant 1: feaf451e-ee77-432e-be8a-3f493aae9319; tenant 2: e0a901f1-42e6-490f-a27d-1c5f5517843f. Public login browser checks passed at widths 1365 and 390 with no horizontal overflow. Full authenticated staging acceptance remains blocked as described above. The previous session's approval-service usage interruption has cleared; the remaining live blocker is Cloudflare CPU capacity and the owner's billing decision.
+The dependency audit tracked two moderate ExcelJS/uuid findings. The optional XLSX bundle remains large and is loaded on demand. Classroom credentials and optional password changes are preserved. No production-readiness claim is made.

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { parseRoster, type RosterRow } from "./roster";
 import { PrivateMedia } from "./PrivateMedia";
+import {PaperLibrary} from './PaperLibrary';
 import "./integrated.css";
 type Role = "platform_owner" | "school_admin" | "teacher" | "student";
 interface Profile {
@@ -721,6 +722,7 @@ export default function IntegratedApp() {
                     </p>
                   </section>
                 )}
+                {(profile.role==='teacher'||profile.role==='school_admin')&&<PaperLibrary base={base} role={profile.role}/>}
                 <PrivateMedia base={base} />
                 <section className="panel">
                   <h2>Change my password</h2>
