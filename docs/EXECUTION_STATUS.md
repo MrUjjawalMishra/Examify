@@ -23,9 +23,16 @@ Public Supabase signup and anonymous signin are disabled; real requests returned
 
 See MANAGED_AUTH_OPERATIONS.md for configuration, pepper preservation and partial-failure recovery. No paid Cloudflare or Supabase plan was enabled. Expenditure authorization remains ₹0.
 
-## Question papers: implementation in progress
+## Question papers: staging verified
 
-New migration 0006 adds persistent question papers. Authenticated staff APIs and a teacher/admin UI support assigned-class/subject papers, multiple-choice answer keys, written-answer rubrics, bounded marks, immutable saved papers and idempotent creation. Students cannot access this staff paper library. The two new validation/D1 HTTP tests passed. This addition is not yet staging verified.
+New migration 0006 adds persistent question papers. Authenticated staff APIs and a teacher/admin UI support assigned-class/subject papers, multiple-choice answer keys, written-answer rubrics, bounded marks, immutable saved papers and idempotent creation. Students cannot access this staff paper library. All 58 Worker tests pass across 16 files; frontend TypeScript/build pass. Migration 0006 was applied to both existing staging school databases. Real browser acceptance passed: creation of multiple-choice and written questions, reload persistence, saved answer keys/rubrics, cross-school denial and student API/UI denial. Evidence: ignored `test-results/staging-papers.json`, completed 2026-11-02T02:53:53.553Z.
+
+Deployed source: `aa2fa9f2181ad972b62aafecf5f2465144241a23`. Latest versions:
+- Gateway: `27be82d1-af0f-47f9-8d37-ca0988b32d87`
+- School 1: `64de7b0d-d287-4892-9fa2-836f033b00db`
+- School 2: `b68f3941-018b-49d0-9863-b97fcee189d6`
+
+A 49-invocation telemetry sample of these versions had maximum CPU 6 ms and zero exceededCpu outcomes; 20 paper invocations peaked at 3 ms. Observed 401/403 responses were expected authorization denials; creation/read returned 201/200. This sample is not load-test acceptance.
 
 ## Remaining product and release gates
 
