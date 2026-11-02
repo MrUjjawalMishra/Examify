@@ -9,7 +9,7 @@ const tp=await teacher.newPage(),sp=await student.newPage();
 const checks=[],record=x=>{checks.push(x);console.log('PASS '+x)};
 const timeout=setTimeout(()=>{console.error('Examination acceptance timed out');process.exit(1)},300000);
 async function login(page,username,password){await page.goto(origin);await page.getByLabel('Find your school').fill('C8');await page.getByRole('button',{name:'Search',exact:true}).click();await page.locator('select').first().selectOption('C8');await page.getByLabel('Account ID',{exact:true}).fill(username);await page.getByLabel('Password',{exact:true}).fill(password);await page.getByRole('button',{name:'Sign in',exact:true}).click();await page.getByRole('button',{name:'Sign out'}).waitFor();}
-async function api(ctx,path,data){const response=await ctx.request[data===undefined?'get':'post'](base+path,data===undefined?{}:{data});assert.ok(response.ok(),`${path}: HTTP ${response.status()}`);return response.json();}
+async function api(ctx,path,data){const response=await ctx.request[data===undefined?'get':'post'](base+path,data===undefined?{}:{data,headers:{Origin:origin}});assert.ok(response.ok(),`${path}: HTTP ${response.status()}`);return response.json();}
 function localDate(ms){const d=new Date(ms);return new Date(ms-d.getTimezoneOffset()*60000).toISOString().slice(0,16);}
 try{
  await login(tp,credentials.teacher.username,credentials.teacher.initialPassword);

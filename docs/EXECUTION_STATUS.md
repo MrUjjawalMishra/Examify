@@ -36,6 +36,34 @@ A 49-invocation telemetry sample of these versions had maximum CPU 6 ms and zero
 
 ## Remaining product and release gates
 
-Scheduling, attempts/autosave/deadlines, grading, publication, examination integrity, approved free AI conversion/evaluation, physical-paper workflows, assessment-aware image sharing and analytics remain unfinished. No fake AI results are served. R2 currently has per-user upload limits, but aggregate budgets/retention are still needed before a broad zero-cost launch; free allowances alone are not a spending cap. Load testing, broader security acceptance and production release remain outstanding.
+The deterministic examination workflow described below is staging verified. Approved free AI conversion/evaluation, physical-paper workflows, assessment-aware image sharing and analytics remain unfinished. Basic integrity event capture exists; teacher-facing strike summaries and broader abuse/capacity controls still need completion. No fake AI results are served. R2 currently has per-user upload limits, but aggregate budgets/retention are still needed before a broad zero-cost launch; free allowances alone are not a spending cap. Load testing, broader security acceptance and production release remain outstanding.
 
 The dependency audit tracked two moderate ExcelJS/uuid findings. The optional XLSX bundle remains large and is loaded on demand. Classroom credentials and optional password changes are preserved. No production-readiness claim is made.
+
+
+## Examination engine: staging verified on 2 November
+
+Deployed source commit: `7a022b2` on `codex/production-foundation`. Additive tenant migration 0007 was applied successfully to both existing staging school databases. Production was not modified.
+
+- Gateway version: `a3f38ed4-331f-4888-bfec-8c77edbf5004`
+- School 1 version: `c55e8ce4-9588-448a-a58c-8ae052b85f77`
+- School 2 version: `71dd170c-e2d9-4938-ad94-94108815da61`
+- URL: https://examify-staging.mr-ujjawalmishra.workers.dev
+
+Implemented: immutable examination snapshots; assigned class/subject scheduling; up to 100 questions; stable question/option permutations; unique student attempts; server deadlines; IndexedDB drafts; revision-checked autosaves and conflict recovery; idempotent submission; bounded finalization; optional negative marking in integer units; teacher draft/final grades and append-only history; publication gates; student-only published results; basic focus/visibility events; teacher extension/end controls. Tenant configs include minute-level cron triggers. Request-driven deadline finalization was observed live; cron execution itself was not observed in the telemetry sample, so configured cron is not claimed as independently runtime verified.
+
+Real browser acceptance scripts and ignored evidence:
+- `scripts/staging-examinations.mjs` / `test-results/staging-examinations.json`: teacher scheduled 50 MCQs; student answered all through the UI; offline answer synchronized; reload preserved accepted answer, shuffle and deadline; cross-school request denied; private keys inaccessible; manual submission; teacher reviewed 100/100; publication; student result visible.
+- `scripts/staging-exam-expiry.mjs` / `test-results/staging-exam-expiry.json`: 100-question paper accepted; live one-minute deadline finalized automatically; late answer rejected; wrong answer -0.25, unanswered zero; written grade initially unconfirmed; teacher saved draft, publication stayed blocked, then confirmed and published; student saw 0.75/100 and feedback.
+
+Existing owner/admin/import workflows were verified in the preceding auth acceptance, not recreated in these two runs. Local D1 tests cover two databases, duplicate starts/submissions, stale answer revisions, exact grading, expiration, grade conflicts, flags, immutable history and extension retries. Frontend TypeScript and production build passed; the optional ExcelJS chunk warning remains. Final full-suite run: 62 tests passed across 18 files, including the three NVIDIA adapter contract tests. Command: `node node_modules/vitest/vitest.mjs run` from `apps/workers`; duration 21.06 seconds.
+
+Cloudflare telemetry at 2026-11-02T08:18:03.972Z sampled 322 invocations of these versions: maximum CPU 9 ms, zero exceededCpu outcomes. Gateway max 5 ms; school 1 max 9 ms; school 2 max 3 ms. This is workflow evidence, not 250-user concurrency acceptance. No paid plan was enabled. Aggregate admission quotas, free-allocation exhaustion handling and abandoned-cohort backlog testing remain release gates.
+
+## AI continuation: adapter locally tested, not integrated or live verified
+
+Added a server-only NVIDIA adapter for the specified `nvidia/nemotron-3.5-lightning-30b-a3b` model. Its current official build page lists a free prototype endpoint: https://build.nvidia.com/nvidia/nemotron-3.5-lightning-30b-a3b/build . Model availability does not establish the owner's remaining quota or production suitability.
+
+The adapter bounds input/output, rejects redirects, validates question and integer-score outputs, exposes usage accounting, requires teacher approval, and returns explicit quota/provider errors without fake fallback. Three adapter contract tests passed using controlled provider responses; these are not live AI tests. The adapter is not wired into a deployed HTTP route or frontend yet. No NVIDIA credential is present in the checked local configuration. Owner was asked to save a free-only key in ignored `.local/nvidia-ai.json`; no key is requested in chat. Durable AI quotas, authorized draft persistence, teacher UI, real provider acceptance and multimodal analysis remain outstanding.
+
+Operational details: `docs/EXAMINATION_OPERATIONS.md`.
