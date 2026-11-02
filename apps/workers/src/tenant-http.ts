@@ -1,3 +1,4 @@
+import {examinationRequest} from './examinations';
 import {ManagedAuth, type ManagedAuthConfig} from './managed-auth';
 import {createManagedAccount} from './managed-provisioning';
 import {changeManagedPassword} from './managed-credentials';
@@ -155,6 +156,7 @@ export async function tenantFetch(
     if (!session) return json({ error: "UNAUTHORIZED" }, 401);
     if (path === "/api/auth/me" && request.method === "GET")
       return json(session);
+    if(path==='/api/exams'||path.startsWith('/api/exams/')||path.startsWith('/api/attempts/'))return await examinationRequest(request,env.DB,session);
     if(path==='/api/papers'||path.startsWith('/api/papers/')){
       if(request.method==='POST'&&!(await rateLimit(env.DB,`papers:${session.userId}`,30)))return json({error:'RATE_LIMITED'},429);
       return await paperRequest(request,env.DB,session);

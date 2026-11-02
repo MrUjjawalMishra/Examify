@@ -31,5 +31,10 @@
   "vars": {
     "AUTH_MODE": "supabase",
     "SUPABASE_URL": "https://trrwrjetxfrgvysciihq.supabase.co"
+  },
+  "triggers": {
+    "crons": [
+      "* * * * *"
+    ]
   }
 }

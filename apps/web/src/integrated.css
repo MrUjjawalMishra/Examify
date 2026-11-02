@@ -233,3 +233,9 @@
     color: black;
   }
 }
+
+/* Keep the active attempt clear of unrelated dashboard controls. */
+.ex-app:has(.exam-room) .panel:not(.exam-room) { display: none; }
+.exam-room nav { display:flex; flex-wrap:wrap; gap:.4rem; margin-block:1rem; }
+.exam-room nav button[aria-current="step"] { outline:3px solid #2563eb; }
+.exam-room fieldset label { display:block; margin-block:.8rem; }

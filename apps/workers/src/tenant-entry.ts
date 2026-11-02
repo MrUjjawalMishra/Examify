@@ -1,3 +1,4 @@
+import {finalizeExpired} from './examinations';
 import {ManagedAuth,provisioningId,type ManagedAuthConfig} from './managed-auth';
 import type { D1Database, R2Bucket } from "@cloudflare/workers-types";
 import { timingSafeEqual } from "node:crypto";
@@ -9,6 +10,7 @@ interface Env extends ManagedAuthConfig {
   FILES?: R2Bucket;
 }
 export default {
+  async scheduled(_event:unknown,env:Env){await finalizeExpired(env.DB);},
   async fetch(req: Request, env: Env): Promise<Response> {
     const supplied = Buffer.from(req.headers.get("X-Examify-Key") ?? ""),
       expected = Buffer.from(env.INTERNAL_KEY ?? "");

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 import { parseRoster, type RosterRow } from "./roster";
 import { PrivateMedia } from "./PrivateMedia";
 import {PaperLibrary} from './PaperLibrary';
+import {ExaminationWorkspace} from './ExaminationWorkspace';
 import "./integrated.css";
 type Role = "platform_owner" | "school_admin" | "teacher" | "student";
 interface Profile {
@@ -717,12 +718,12 @@ export default function IntegratedApp() {
                       </p>
                     )}
                     <p>
-                      Examinations will appear here when the assessment workflow
-                      is available.
+                      Your examinations and published results are available below.
                     </p>
                   </section>
                 )}
                 {(profile.role==='teacher'||profile.role==='school_admin')&&<PaperLibrary base={base} role={profile.role}/>}
+                <ExaminationWorkspace base={base} role={profile.role} userId={profile.userId??profile.id??''}/>
                 <PrivateMedia base={base} />
                 <section className="panel">
                   <h2>Change my password</h2>

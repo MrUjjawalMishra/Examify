@@ -3,7 +3,7 @@ import type {TenantSession} from './sessions';
 import {body,json} from './tenant-http';
 export interface PaperQuestion {prompt:string;kind:'choice'|'written';marks:number;options?:string[];correctIndex?:number;rubric?:string}
 export function validatePaper(input:Record<string,unknown>){
- if(typeof input.title!=='string'||!input.title.trim()||input.title.length>160||typeof input.classId!=='string'||typeof input.subjectId!=='string'||typeof input.requestId!=='string'||!/^[a-zA-Z0-9-]{16,80}$/.test(input.requestId)||!Array.isArray(input.questions)||input.questions.length<1||input.questions.length>20)throw Error('INVALID_PAPER');
+ if(typeof input.title!=='string'||!input.title.trim()||input.title.length>160||typeof input.classId!=='string'||typeof input.subjectId!=='string'||typeof input.requestId!=='string'||!/^[a-zA-Z0-9-]{16,80}$/.test(input.requestId)||!Array.isArray(input.questions)||input.questions.length<1||input.questions.length>100)throw Error('INVALID_PAPER');
  const questions:PaperQuestion[]=input.questions.map((value:unknown)=>{
   if(!value||typeof value!=='object'||Array.isArray(value))throw Error('INVALID_PAPER');
   const q=value as Record<string,unknown>;
@@ -37,7 +37,7 @@ export async function paperRequest(req:Request,db:D1Database,s:TenantSession){
  }
  if(path==='/api/papers'&&req.method==='POST'){
   if(s.role!=='teacher')return json({error:'FORBIDDEN'},403);
-  let paper;try{paper=validatePaper(await body(req,65536));}catch{return json({error:'INVALID_PAPER'},400);}
+  let paper;try{paper=validatePaper(await body(req,262144));}catch{return json({error:'INVALID_PAPER'},400);}
   const assigned=await db.prepare('SELECT 1 FROM teacher_subjects WHERE teacher_id=? AND class_id=? AND subject_id=?').bind(s.userId,paper.classId,paper.subjectId).first();
   if(!assigned)return json({error:'FORBIDDEN'},403);
   const serialized=JSON.stringify(paper.questions);
