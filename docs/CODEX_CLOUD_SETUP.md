@@ -42,3 +42,20 @@ If frontend build does not include TypeScript checking in its package script, al
 Start new cloud work from the published Examify environment and verify the selected branch/head. Read the repository context at the start and explicitly commit/push reviewed changes at the end. Preserve existing task changes before any synchronization. A saved cloud task and a new task have different filesystem state; don't assume an existing task automatically switches to another task's latest code. Repository context is curated; raw chat histories are not automatically imported.
 
 Official setup reference: https://learn.chatgpt.com/docs/environments/cloud-environments . Use the current Create environment workflow and its setup report, then Publish. A repository guide alone is not proof that an environment exists or is runnable.
+
+## Cloud network recovery — 4 November 2026
+
+The existing private draft was recovered without deletion, restart, broader network access or application changes. Its effective policy is restricted/enforced with the `package_managers` preset, including `github.com`, `registry.npmjs.org`, `registry.yarnpkg.com` and `nodejs.org`; no custom domains were added. Managed proxy and TLS settings were preserved.
+
+The cloud execution tool supports `sandbox_permissions: use_default | require_escalated`, `justification` and `prefix_rule`. It does not support `with_additional_permissions` or `additional_permissions.network.enabled`. The workaround discussed in openai/codex issue #50986 was investigated against the actual tool schema, not assumed available.
+
+Both diagnostics had a 20-second outer timeout. Default execution returned Git exit 128 (`Failed to connect to proxy port 8080`) and npm exit 1 (`connect EPERM` to the managed proxy). The same commands with approved `require_escalated` execution succeeded:
+
+- `git ls-remote origin refs/heads/codex/production-foundation`: exit 0, `69bea10b092e34f9a75c0a755297a19a3ce97111`.
+- `npm view esbuild version --fetch-retries=0 --fetch-timeout=15000`: exit 0, `0.28.2`.
+
+This corrects the earlier diagnosis: the observed failure was resolved through supported execution permissions; a broken proxy service or required platform restart was not established.
+
+The cloud checkout safely selected `codex/production-foundation` at that SHA, preserved the original `work` branch and stayed clean. Node 24.22.1/npm 11.9.0 were used. Both documented npm installs passed; Worker typecheck, 62 tests across 18 files, frontend typecheck and production build all passed. Existing large ExcelJS bundle warning remains. These are actual cloud setup results, not reused Windows results; live staging/browser acceptance was not rerun.
+
+Saved draft revision 3 was read back with the exact verified SHA and mount path `Examify`, updated install/start instructions, restricted package-manager networking, no secrets and no pending runtime requirements. The configuration tool stores a commit snapshot, not a moving branch. Startup instructions verify/select the maintained branch safely if restoration is detached. Fresh-task restoration remains unverified. The draft is prepared for publication review but remains unpublished; do not save the UI's unsaved broader-internet toggle. No application code, production infrastructure or spending changed.

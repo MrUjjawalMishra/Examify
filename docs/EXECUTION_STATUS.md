@@ -82,3 +82,7 @@ The owner requested a private Codex Cloud development environment for the mainta
 ### Cloud setup follow-up — 4 November 2026
 
 The replacement Examify environment now exists as an owner-only saved draft. Setup resumed after the usage-limit interruption, but its managed proxy refused GitHub and npm connections; the checkout remains an older revision and the configuration still references main. Install/start instructions were saved with branch guards. No successful cloud installation/test/build or publication is claimed. See docs/CODEX_CLOUD_SETUP.md for the configuration identifier and recovery details. Production and spending remain unchanged.
+
+### Cloud recovery verification — 4 November 2026
+
+Cloud setup at `69bea10b092e34f9a75c0a755297a19a3ce97111` passed both npm installs, Worker typecheck, all 62 tests/18 files, frontend typecheck and production build. Approved `require_escalated` execution resolved default sandbox proxy connection failures without network-policy changes. The actual tool does not support `with_additional_permissions`. Existing private draft revision 3 now pins that verified commit and has corrected install/start instructions; it remains unpublished and fresh-task restoration remains unverified. No app code, production or billing changes. Full evidence and command results: `docs/CODEX_CLOUD_SETUP.md`.

@@ -94,3 +94,7 @@ The owner requested a private Codex Cloud development environment for the mainta
 ### Cloud setup follow-up — 4 November 2026
 
 The replacement Examify environment now exists as an owner-only saved draft. Setup resumed after the usage-limit interruption, but its managed proxy refused GitHub and npm connections; the checkout remains an older revision and the configuration still references main. Install/start instructions were saved with branch guards. No successful cloud installation/test/build or publication is claimed. See docs/CODEX_CLOUD_SETUP.md for the configuration identifier and recovery details. Production and spending remain unchanged.
+
+### Cloud networking correction — 4 November 2026
+
+The earlier proxy-blocked setup was recovered using supported approved command execution (`require_escalated`), without proxy bypass, broader policy, new credentials or restart. The cloud checkout at `69bea10` passed installation, 62 Worker tests and both TypeScript checks/frontend build. The existing private draft now pins that exact commit and carries corrected reusable instructions; it is prepared for publication review, not yet published or fresh-task verified. Preserve the zero-cost policy and production boundary. See `docs/CODEX_CLOUD_SETUP.md` for diagnostic evidence and snapshot semantics.
