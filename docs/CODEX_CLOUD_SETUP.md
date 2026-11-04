@@ -1,6 +1,8 @@
 # Examify Codex Cloud setup
 
-Status on 4 November 2026: the owner deleted the former non-runnable environment. The authenticated environment listing now returns no saved environments. A replacement has not yet been created or published. The controllable web browser requires the owner's ChatGPT sign-in before setup can continue.
+Status on 4 November 2026: replacement Examify environment created and saved as a private draft, not published or runnable. Setup conversation: https://chatgpt.com/local/01a1a4a3-56ee-703a-9c44-c9176026a068?hostId=local . Configuration ID: `a3adb1c3-9450-4edc-97df-5b06267fe45f~asenvcfg_3f8da456cbcc81918185f05ec41910e8`.
+
+Setup reports Node 24.22.1 and a clean older checkout at `60b7ebef053a4b63048c55c2d618f0e4f9a54e38`, but both GitHub and npm requests fail connecting to the managed `proxy:8080` before TLS/authentication. The saved repository ref still reports `main`; the desired branch is not available in that checkout. Branch-gated install/start instructions are saved. Installation, tests and builds remain unvalidated. Do not publish this snapshot. Restore the managed cloud proxy/setup instance through supported platform recovery, select the maintained branch, then rerun setup checks. No proxy bypass, paid upgrade, secret import or production deployment was performed.
 
 ## Intended private environment
 

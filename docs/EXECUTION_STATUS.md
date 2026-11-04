@@ -77,3 +77,8 @@ Imported and sanitized the owner's consolidated handoff into `docs/PROJECT_CONTE
 ## Codex Cloud setup request — 4 November 2026
 
 The owner requested a private Codex Cloud development environment for the maintained branch and then deleted the former non-runnable environment. Authenticated listing confirmed no environments remain. Replacement creation is pending ChatGPT sign-in in the controllable browser; no replacement is claimed published or runnable. Setup instructions are preserved in `docs/CODEX_CLOUD_SETUP.md`. This is development-environment setup, with the existing zero-cost and production-approval constraints preserved.
+
+
+### Cloud setup follow-up — 4 November 2026
+
+The replacement Examify environment now exists as an owner-only saved draft. Setup resumed after the usage-limit interruption, but its managed proxy refused GitHub and npm connections; the checkout remains an older revision and the configuration still references main. Install/start instructions were saved with branch guards. No successful cloud installation/test/build or publication is claimed. See docs/CODEX_CLOUD_SETUP.md for the configuration identifier and recovery details. Production and spending remain unchanged.
