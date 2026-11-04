@@ -72,3 +72,8 @@ Operational details: `docs/EXAMINATION_OPERATIONS.md`.
 ## Cross-device context documentation — 4 November 2026
 
 Imported and sanitized the owner's consolidated handoff into `docs/PROJECT_CONTEXT.md`, reconciling it against branch checkpoint `9bf701c` and the current code/documentation. Fictional login examples were replaced with format placeholders; the Worker-managed auth pepper and safe branch synchronization were clarified. The original supplied file remains unchanged. `AGENTS.md` requires context/status reads at session startup and reviewed documentation updates for new owner decisions and verified progress. Messages do not synchronize automatically. This documentation-only update did not rerun application tests or live deployment checks and did not change production or spending.
+
+
+## Codex Cloud setup request — 4 November 2026
+
+The owner requested a private Codex Cloud development environment for the maintained branch and then deleted the former non-runnable environment. Authenticated listing confirmed no environments remain. Replacement creation is pending ChatGPT sign-in in the controllable browser; no replacement is claimed published or runnable. Setup instructions are preserved in `docs/CODEX_CLOUD_SETUP.md`. This is development-environment setup, with the existing zero-cost and production-approval constraints preserved.

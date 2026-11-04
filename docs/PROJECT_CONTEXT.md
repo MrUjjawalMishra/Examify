@@ -84,3 +84,8 @@ Imported from the owner-supplied `EXAMIFY_PROJECT_CONTEXT.md`, read in full and 
 - `AGENTS.md` already requires reading this context and execution status at each new session and committing/pushing sanitized relevant updates. No automatic chat synchronization is implied.
 - Reviewed the full supplied document and outgoing changes for credentials and confidential data. No actual secret or student record was identified; fictional login examples were replaced with format placeholders. Public project URLs and commit identifiers were retained.
 - This update changes documentation only. No infrastructure, production deployment, billing setting or application behavior was changed; the strict zero-cost constraint remains active.
+
+
+## Codex Cloud setup request — 4 November 2026
+
+The owner requested a private Codex Cloud development environment for the maintained branch and then deleted the former non-runnable environment. Authenticated listing confirmed no environments remain. Replacement creation is pending ChatGPT sign-in in the controllable browser; no replacement is claimed published or runnable. Setup instructions are preserved in `docs/CODEX_CLOUD_SETUP.md`. This is development-environment setup, with the existing zero-cost and production-approval constraints preserved.
