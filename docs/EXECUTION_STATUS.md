@@ -1,4 +1,4 @@
-# Execution status — 2 November 2026
+# Execution status — updated 4 November 2026
 
 ## Managed authentication: staging verified
 
@@ -67,3 +67,8 @@ Added a server-only NVIDIA adapter for the specified `nvidia/nemotron-3.5-lightn
 The adapter bounds input/output, rejects redirects, validates question and integer-score outputs, exposes usage accounting, requires teacher approval, and returns explicit quota/provider errors without fake fallback. Three adapter contract tests passed using controlled provider responses; these are not live AI tests. The adapter is not wired into a deployed HTTP route or frontend yet. No NVIDIA credential is present in the checked local configuration. Owner was asked to save a free-only key in ignored `.local/nvidia-ai.json`; no key is requested in chat. Durable AI quotas, authorized draft persistence, teacher UI, real provider acceptance and multimodal analysis remain outstanding.
 
 Operational details: `docs/EXAMINATION_OPERATIONS.md`.
+
+
+## Cross-device context documentation — 4 November 2026
+
+Imported and sanitized the owner's consolidated handoff into `docs/PROJECT_CONTEXT.md`, reconciling it against branch checkpoint `9bf701c` and the current code/documentation. Fictional login examples were replaced with format placeholders; the Worker-managed auth pepper and safe branch synchronization were clarified. The original supplied file remains unchanged. `AGENTS.md` requires context/status reads at session startup and reviewed documentation updates for new owner decisions and verified progress. Messages do not synchronize automatically. This documentation-only update did not rerun application tests or live deployment checks and did not change production or spending.
